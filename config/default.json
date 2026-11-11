@@ -1,0 +1,58 @@
+{
+  "window": {"width": 1280, "height": 800, "fps": 60},
+  "map": {"cols": 32, "rows": 20, "cell_size": 1.0},
+  "simulation": {"dt": 0.05, "max_time": 40.0, "goal_radius": 0.6, "lookahead": 2.0},
+  "vehicle": {
+    "radius": 0.35,
+    "wheelbase": 0.7,
+    "max_speed": 4.0,
+    "max_reverse_speed": 0.0,
+    "max_acceleration": 5.0,
+    "max_brake": 8.0,
+    "max_steering_angle_deg": 35.0,
+    "drag": 0.4
+  },
+  "lidar": {"num_rays": 72, "fov_deg": 360, "max_range": 8.0},
+  "observation": {"use_previous_lidar": true, "distance_scale": 10.0, "deviation_scale": 2.0},
+  "policy": {"hidden_layers": [16]},
+  "training": {
+    "strategy": "genetic",
+    "population_size": 50,
+    "visible_agents": 4,
+    "seed": 2024,
+    "scenarios_per_candidate": 3,
+    "validation_scenarios": 5,
+    "resample_scenarios_every": 0,
+    "validate_every": 1,
+    "stall_time": 4.0,
+    "stall_distance": 0.5,
+    "checkpoint_every": 5,
+    "map_files": []
+  },
+  "fitness": {
+    "progress": 100.0,
+    "goal": 500.0,
+    "time_bonus": 100.0,
+    "collision": 20.0,
+    "stall": 30.0,
+    "deviation": 30.0,
+    "deviation_scale": 2.0,
+    "smoothness": 10.0
+  },
+  "generator": {
+    "navigation_mode": "route",
+    "control_points": [2, 4],
+    "static_obstacles": [3, 8],
+    "dynamic_obstacles": [1, 3],
+    "speed_range": [0.8, 2.5],
+    "pause_range": [0.3, 1.5],
+    "on_route_fraction": 0.4
+  },
+  "genetic": {
+    "elitism": 2,
+    "tournament_size": 3,
+    "init_scale": 0.5,
+    "crossover": {"type": "uniform", "rate": 0.8},
+    "mutation": {"rate": 0.1, "sigma": 0.3, "sigma_decay": 1.0}
+  }
+}
