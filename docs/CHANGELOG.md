@@ -2,6 +2,19 @@
 
 Historial resumido. El detalle de cada tarea está en `reports/`.
 
+## 0.1.1 — 2026-11-12
+
+Documentación completada. Informe: `reports/2026-11-12-completar-readme-y-docs.md`.
+
+- `README.md` reescrito: qué hace, requisitos, instalación, inicio rápido,
+  controles, entrenamiento sin ventana, configuración, estructura y estado.
+- Capturas reales de la aplicación en `docs/images/`.
+- Mapas de ejemplo `maps/ejemplo_ruta.json` y `maps/ejemplo_libre.json`.
+- `docs/requests/README.md`: flujo y estados de una solicitud.
+- Roadmap con las etapas siguientes propuestas; estado y problemas conocidos
+  actualizados con los resultados de 40 generaciones de entrenamiento.
+- `tests/test_docs.py`: enlaces de la documentación y mapas de ejemplo.
+
 ## 0.1.0 — 2026-11-11
 
 Primera versión funcional. Informe: `reports/2026-11-11-primera-version-simulador.md`.

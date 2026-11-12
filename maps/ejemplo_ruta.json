@@ -1,0 +1,206 @@
+{
+  "format_version": 1,
+  "name": "ejemplo_ruta",
+  "cols": 32,
+  "rows": 20,
+  "cell_size": 1.0,
+  "navigation_mode": "route",
+  "route": [
+    [
+      2,
+      10
+    ],
+    [
+      3,
+      10
+    ],
+    [
+      4,
+      10
+    ],
+    [
+      5,
+      10
+    ],
+    [
+      6,
+      10
+    ],
+    [
+      7,
+      10
+    ],
+    [
+      8,
+      10
+    ],
+    [
+      9,
+      10
+    ],
+    [
+      10,
+      9
+    ],
+    [
+      11,
+      8
+    ],
+    [
+      12,
+      7
+    ],
+    [
+      13,
+      6
+    ],
+    [
+      14,
+      5
+    ],
+    [
+      15,
+      5
+    ],
+    [
+      16,
+      5
+    ],
+    [
+      17,
+      5
+    ],
+    [
+      18,
+      5
+    ],
+    [
+      19,
+      5
+    ],
+    [
+      20,
+      5
+    ],
+    [
+      21,
+      5
+    ],
+    [
+      22,
+      6
+    ],
+    [
+      22,
+      7
+    ],
+    [
+      23,
+      8
+    ],
+    [
+      24,
+      9
+    ],
+    [
+      25,
+      10
+    ],
+    [
+      25,
+      11
+    ],
+    [
+      26,
+      12
+    ],
+    [
+      27,
+      12
+    ],
+    [
+      28,
+      12
+    ],
+    [
+      29,
+      12
+    ]
+  ],
+  "start": [
+    2,
+    10
+  ],
+  "start_heading": 0.0,
+  "goal": [
+    29,
+    12
+  ],
+  "static_obstacles": [
+    [
+      17,
+      5
+    ],
+    [
+      12,
+      9
+    ],
+    [
+      19,
+      3
+    ],
+    [
+      24,
+      11
+    ],
+    [
+      27,
+      14
+    ]
+  ],
+  "dynamic_obstacles": [
+    {
+      "kind": "vertical",
+      "x": 6.5,
+      "y": 7.5,
+      "speed": 1.5,
+      "radius": 0.4,
+      "direction": 1,
+      "pause": 0.5,
+      "range_min": 7.5,
+      "range_max": 13.5,
+      "center_x": 0.0,
+      "center_y": 0.0,
+      "orbit_radius": 0.0
+    },
+    {
+      "kind": "circular",
+      "x": 19.5,
+      "y": 10.5,
+      "speed": 1.2,
+      "radius": 0.4,
+      "direction": 1,
+      "pause": 0.0,
+      "range_min": 0.0,
+      "range_max": 0.0,
+      "center_x": 19.5,
+      "center_y": 7.5,
+      "orbit_radius": 3.0
+    },
+    {
+      "kind": "horizontal",
+      "x": 27.5,
+      "y": 9.5,
+      "speed": 2.0,
+      "radius": 0.4,
+      "direction": -1,
+      "pause": 0.0,
+      "range_min": 21.5,
+      "range_max": 27.5,
+      "center_x": 0.0,
+      "center_y": 0.0,
+      "orbit_radius": 0.0
+    }
+  ],
+  "seed": null
+}

@@ -12,6 +12,8 @@ pedir algo, crear una solicitud en `requests/open/`.
 
 ## Entrenamiento
 
+- Medir cuánto mejora la validación al remuestrear escenarios en cada generación
+  y al usar más escenarios por individuo (etapa 8 del roadmap).
 - Evaluar candidatos en procesos paralelos para acortar cada generación.
 - Seguir entrenando en segundo plano mientras se usa el editor o la conducción manual.
 - Ajustar hiperparámetros de GA y fitness; decaimiento de sigma por defecto.

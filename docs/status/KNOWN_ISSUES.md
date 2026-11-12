@@ -24,6 +24,12 @@
 
 ## Entrenamiento
 
+- **Generaliza poco con la configuración por defecto.** Tras 40 generaciones el
+  mejor individuo llega al destino en sus tres escenarios de entrenamiento,
+  pero solo en 1 de los 5 de validación. Los tres escenarios son fijos durante
+  todo el entrenamiento, así que la población se especializa en ellos. Es de
+  esperar que ayude poner `training.resample_scenarios_every` en 1 o subir
+  `training.scenarios_per_candidate`; todavía no se midió.
 - Con velocidad x1 una generación dura lo que tarden los individuos visibles.
   Subir la velocidad o poner `visible_agents` en 0 la acorta.
 - Un checkpoint solo se puede reanudar con la misma arquitectura de red y el
@@ -33,5 +39,6 @@
 
 ## Interfaz
 
-- No se probó a mano en una ventana real (ver `PROJECT_STATUS.md`).
+- Falta un recorrido manual sistemático de la interfaz en una ventana real
+  (ver `PROJECT_STATUS.md`); hasta ahora solo se usó así el entrenamiento.
 - La lista "Cargar..." muestra como máximo 8 mapas.

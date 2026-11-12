@@ -58,7 +58,7 @@ optimization/genetic/   plugin GA (único algoritmo concreto)
 editor/            modelo del editor, guardado/carga, generador aleatorio
 rendering/         dibujo ASCII en Pygame
 ui/                ventana, vistas y panel de entrenamiento
-maps/ models/ logs/     datos del usuario (mapas, checkpoints, registros)
+maps/ models/ logs/     datos del usuario (mapas, checkpoints, registros); maps/ejemplo_* son de muestra
 tests/             pruebas (pytest)
 docs/              documentación viva
 ```
@@ -110,6 +110,11 @@ Dependencias permitidas: ver `docs/architecture/OVERVIEW.md`.
    afirmar que una prueba se ejecutó si no se ejecutó.
 6. Si la tarea venía de una solicitud: actualizar su estado y moverla a
    `docs/requests/done/`.
-7. Resumir al usuario qué se construyó, cómo probarlo y qué quedó pendiente.
+7. Si cambió la interfaz o los símbolos, actualizar las capturas de
+   `docs/images/` y el `README.md`.
+8. Resumir al usuario qué se construyó, cómo probarlo y qué quedó pendiente.
 
-Mantener la documentación breve y sin duplicados: cada dato vive en un solo lugar.
+Mantener la documentación sin duplicados (cada dato vive en un solo lugar) y
+**completa**: ningún documento, carpeta o sección debe quedar a medio rellenar.
+El `README.md` debe bastar para entender qué es el proyecto, verlo e instalarlo
+sin abrir nada más. `tests/test_docs.py` comprueba enlaces y mapas de ejemplo.

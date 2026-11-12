@@ -16,6 +16,7 @@ y Claude colaboran. Todo está en Markdown.
 | ¿Qué problemas conocemos? | [status/KNOWN_ISSUES.md](status/KNOWN_ISSUES.md) |
 | ¿Qué sigue? | [status/ROADMAP.md](status/ROADMAP.md) y [status/BACKLOG.md](status/BACKLOG.md) |
 | ¿Cómo uso la aplicación? | [GUIDE.md](GUIDE.md) |
+| ¿Cómo pido un cambio? | [requests/README.md](requests/README.md) |
 
 ## Especificación (la edita el usuario)
 
@@ -33,6 +34,9 @@ Hay dos caminos, ambos sin tocar código:
    archivo pasa a ser la referencia.
 2. **Crear una solicitud**: copiar [requests/TEMPLATE.md](requests/TEMPLATE.md) a
    `requests/open/mi-cambio.md` y completarla.
+
+El detalle del flujo y los estados de una solicitud está en
+[requests/README.md](requests/README.md).
 
 Después hay que pedírselo a Claude de forma expresa ("revisa", "discute" o
 "implementa la solicitud X"): escribir un documento no dispara su implementación.

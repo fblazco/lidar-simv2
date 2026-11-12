@@ -1,0 +1,113 @@
+{
+  "format_version": 1,
+  "name": "ejemplo_libre",
+  "cols": 32,
+  "rows": 20,
+  "cell_size": 1.0,
+  "navigation_mode": "free",
+  "route": [],
+  "start": [
+    3,
+    16
+  ],
+  "start_heading": -0.4795192919925962,
+  "goal": [
+    28,
+    3
+  ],
+  "static_obstacles": [
+    [
+      11,
+      10
+    ],
+    [
+      11,
+      11
+    ],
+    [
+      11,
+      12
+    ],
+    [
+      11,
+      13
+    ],
+    [
+      11,
+      14
+    ],
+    [
+      19,
+      5
+    ],
+    [
+      19,
+      6
+    ],
+    [
+      19,
+      7
+    ],
+    [
+      19,
+      8
+    ],
+    [
+      19,
+      9
+    ],
+    [
+      24,
+      12
+    ],
+    [
+      25,
+      12
+    ]
+  ],
+  "dynamic_obstacles": [
+    {
+      "kind": "circular",
+      "x": 17.5,
+      "y": 9.5,
+      "speed": 1.4,
+      "radius": 0.4,
+      "direction": 1,
+      "pause": 0.0,
+      "range_min": 0.0,
+      "range_max": 0.0,
+      "center_x": 15.5,
+      "center_y": 9.5,
+      "orbit_radius": 2.0
+    },
+    {
+      "kind": "vertical",
+      "x": 23.5,
+      "y": 2.5,
+      "speed": 1.8,
+      "radius": 0.4,
+      "direction": 1,
+      "pause": 0.0,
+      "range_min": 2.5,
+      "range_max": 8.5,
+      "center_x": 0.0,
+      "center_y": 0.0,
+      "orbit_radius": 0.0
+    },
+    {
+      "kind": "horizontal",
+      "x": 14.5,
+      "y": 15.5,
+      "speed": 1.2,
+      "radius": 0.4,
+      "direction": 1,
+      "pause": 1.0,
+      "range_min": 14.5,
+      "range_max": 22.5,
+      "center_x": 0.0,
+      "center_y": 0.0,
+      "orbit_radius": 0.0
+    }
+  ],
+  "seed": null
+}

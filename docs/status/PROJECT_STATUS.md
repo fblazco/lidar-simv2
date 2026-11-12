@@ -1,6 +1,6 @@
 # Estado del proyecto
 
-Última actualización: 2026-11-11 · Versión: primera versión funcional (0.1.0)
+Última actualización: 2026-11-12 · Versión: primera versión funcional (0.1.0)
 
 Solo figura como implementado lo que fue verificado. "Verificado con" indica la
 prueba automática o la comprobación realizada.
@@ -32,19 +32,29 @@ prueba automática o la comprobación realizada.
 | `VISIBLE_AGENTS` individuos visibles, cada uno con su propio mundo; el resto sin renderizado; no bloquea el ciclo de Pygame | `test_training`, `test_app_smoke` + captura |
 | Estadísticas y gráfico de mejor fitness y fitness promedio | `test_app_smoke` + captura |
 | El simulador funciona sin `optimization/genetic/` | `test_architecture` (ejecuta una copia sin esa carpeta) |
+| Mapas de ejemplo `maps/ejemplo_ruta` y `maps/ejemplo_libre`, válidos y simulables | `test_docs` |
+| Documentación con enlaces válidos y capturas reales de la aplicación | `test_docs` + revisión de las capturas |
 
-Aprendizaje observado: con la configuración por defecto (población 50, 3
-escenarios), en 12 generaciones el mejor fitness pasó de -2.8 a 440.9 y la
-validación de -11.5 a 143.7 (≈ 4.5 s por generación sin ventana). Detalle en
-`reports/2026-11-11-primera-version-simulador.md`.
+### Aprendizaje observado (configuración por defecto: población 50, 3 escenarios)
+
+| Corrida | Generación | Mejor fitness | Fitness promedio | Éxito en entrenamiento | Éxito en validación |
+|---|---|---|---|---|---|
+| Sin ventana (2026-11-11) | 1 | -2.8 | -30.4 | 0 % | 0 % |
+| Sin ventana (2026-11-11) | 12 | 440.9 | 11.7 | 4 % | 20 % |
+| Desde la ventana (`logs/entrenamiento_gui.jsonl`) | 40 | 655.0 | 263.7 | 38.7 % | 20 % |
+
+Un mejor fitness de 655 significa que el mejor individuo llega al destino en
+sus tres escenarios de entrenamiento. La validación (cinco mapas que no
+intervienen en la selección) se queda en 20 %: lo aprendido todavía generaliza
+poco. Ver `KNOWN_ISSUES.md` y la etapa 8 del `ROADMAP.md`.
 
 ## Parcialmente implementadas
 
 | Funcionalidad | Qué falta |
 |---|---|
-| Interfaz gráfica | Verificada por pruebas automáticas y capturas con el driver `dummy`; **no se probó a mano en una ventana real** (mouse, teclado, redimensionado). |
+| Interfaz gráfica | Verificada por pruebas automáticas y capturas con el driver `dummy`. El entrenamiento se usó en una ventana real durante 40 generaciones (hay registro y checkpoints), pero **falta un recorrido manual sistemático** de cada herramienta del editor, del teclado y del redimensionado. |
 | Edición de obstáculos dinámicos | El centro de una órbita y la posición inicial no se pueden mover tras crearlos (hay que borrar y volver a crear). |
-| Calidad del aprendizaje | El GA mejora de forma sostenida, pero no se ajustaron hiperparámetros ni se midió la tasa de éxito a largo plazo. |
+| Calidad del aprendizaje | El GA aprende a llegar en sus escenarios de entrenamiento (38.7 % de éxito en la generación 40), pero en validación llega solo en 1 de 5 mapas. No se ajustaron hiperparámetros ni se probó remuestrear escenarios. |
 
 ## Pendientes
 

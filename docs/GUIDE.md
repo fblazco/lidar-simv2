@@ -10,6 +10,8 @@ Una sola ventana con dos modos: **F1 Editor de mapas** y **F2 Simulación**.
 
 ## Modo 1: Editor
 
+![Editor de mapas](images/editor.png)
+
 | Herramienta | Tecla | Uso |
 |---|---|---|
 | Camino | 1 | Arrastrar. El orden en que se dibuja es el orden de la ruta. |
@@ -24,21 +26,34 @@ cambiar el tamaño de la grilla, poner nombre, guardar y cargar (`maps/*.json`),
 generar un mapa aleatorio y vaciar el mapa. Abajo se indica si el mapa está
 listo para simular o qué le falta.
 
+El repositorio trae dos mapas de ejemplo en `maps/`: `ejemplo_ruta` (seguimiento
+de ruta, con los tres tipos de obstáculo móvil) y `ejemplo_libre` (navegación
+libre). Se abren con "Cargar...".
+
 Símbolos: `|` `-` `/` `\` caminos, `X` obstáculo estático, `*` obstáculo
 dinámico, `S` inicio, `G` destino, `o` sobre `| |` el vehículo.
 
 ## Modo 2: Simulación
 
+![Conducción manual](images/manual.png)
+
 **Manual (M).** Se conduce el mapa del editor con flechas o WASD. Si el mapa
 está incompleto se usa uno aleatorio. `R` reinicia, `N` genera otro mapa, `P`
 alterna entre el piloto manual y la mejor política entrenada.
+
+![Entrenamiento](images/entrenamiento.png)
 
 **Entrenamiento (T).** `Espacio` inicia o pausa. Se muestran `visible_agents`
 individuos de la generación en curso, cada uno en su propio escenario; el resto
 se evalúa sin dibujarse. `+` y `-` cambian la velocidad de los visibles. El
 panel muestra las estadísticas y el gráfico de fitness. "Guardar checkpoint"
-escribe en `models/`; "Cargar último" retoma el más reciente. El entrenamiento
-solo avanza mientras esta vista está abierta.
+escribe en `models/`; "Cargar último" retoma el más reciente. "Usar el mapa del
+editor" suma ese mapa a los escenarios de cada individuo (se aplica al pulsar
+"Nuevo"). El entrenamiento solo avanza mientras esta vista está abierta.
+
+Cada vista muestra el número de individuo, el episodio en curso (uno por
+escenario), su fitness parcial y su estado. El vehículo se ve blanco mientras
+está activo, rojo si chocó, verde si llegó y gris si se le acabó el tiempo.
 
 ## Entrenar sin ventana
 
