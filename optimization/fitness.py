@@ -17,6 +17,15 @@ class EpisodeMetrics:
     mean_deviation: float        # desvío lateral medio respecto del camino
     steering_change: float       # cambio medio de dirección entre pasos (0..2)
     acceleration_change: float   # cambio medio de aceleración entre pasos (0..2)
+    reference_length: float = 0.0   # largo del camino más corto del mapa
+    min_clearance: float = 0.0      # distancia mínima a un obstáculo vista por el LiDAR
+
+    @property
+    def path_efficiency(self) -> float:
+        """Camino más corto / distancia recorrida (0..1). Solo cuenta si se llegó al destino."""
+        if not self.reached_goal or self.distance <= 0.0 or self.reference_length <= 0.0:
+            return 0.0
+        return min(1.0, self.reference_length / self.distance)
 
 
 @dataclass
@@ -24,6 +33,7 @@ class FitnessWeights:
     progress: float = 100.0         # por completar el 100 % del recorrido
     goal: float = 500.0             # premio por llegar (muy superior a solo sobrevivir)
     time_bonus: float = 100.0       # extra por llegar rápido (proporcional al tiempo sobrante)
+    efficiency: float = 100.0       # extra por llegar por el camino más corto (proporcional a la eficiencia)
     collision: float = 20.0         # castigo por chocar
     stall: float = 30.0             # castigo por quedarse detenido (mayor que chocar)
     deviation: float = 30.0         # castigo máximo por apartarse del camino
@@ -44,6 +54,7 @@ class FitnessFunction:
         score = w.progress * m.progress
         if m.reached_goal:
             score += w.goal + w.time_bonus * max(0.0, 1.0 - m.time / m.time_limit)
+            score += w.efficiency * m.path_efficiency
         if m.collided:
             score -= w.collision
         if m.stalled:

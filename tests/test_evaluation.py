@@ -45,6 +45,9 @@ def test_metrics_describe_the_episode():
     assert episode.time_limit == 20.0
     assert episode.mean_deviation == pytest.approx(0.0, abs=1e-9)
     assert episode.steering_change == 0.0
+    assert episode.reference_length == pytest.approx(17.0)
+    assert episode.path_efficiency == pytest.approx(1.0)
+    assert 0.0 < episode.min_clearance < 8.0          # lo más cerca que estuvo de algo, según el LiDAR
 
 
 def test_a_stopped_vehicle_is_cut_short_as_stalled():

@@ -9,6 +9,8 @@ from datetime import datetime
 from pathlib import Path
 
 from config import deep_merge, load_config
+from control.avoidance import DEFAULT as LEARNED_AVOIDANCE, discover_avoidance
+from control.avoidance.base import AvoidancePlugin, with_avoidance
 from typing import Dict, Optional, Sequence, Tuple, Union
 
 from editor.map_generator import GeneratorConfig, MapGenerator
@@ -43,6 +45,10 @@ def available_strategies() -> Dict[str, StrategyPlugin]:
     return discover_plugins()
 
 
+def available_avoidance() -> Dict[str, AvoidancePlugin]:
+    return discover_avoidance()
+
+
 def _build_session(config: dict, maps: Sequence[MapData]) -> TrainingSession:
     training = config["training"]
     plugins = discover_plugins()
@@ -54,9 +60,16 @@ def _build_session(config: dict, maps: Sequence[MapData]) -> TrainingSession:
         if problems:
             raise ValueError(f"El mapa '{map_data.name}' no sirve para entrenar: {'; '.join(problems)}")
     bundle = plugins[training["strategy"]].build(config)
+    avoidance = training.get("avoidance", LEARNED_AVOIDANCE)
+    avoiders = discover_avoidance()
+    if avoidance not in avoiders:
+        raise ValueError(f"No existe el algoritmo de evasión '{avoidance}'. Disponibles: {', '.join(avoiders)}")
+    controller_factory = bundle.controller_factory
+    if avoiders[avoidance].build(config) is not None:      # una capa de evasión envuelve a cada controlador
+        controller_factory = with_avoidance(controller_factory, lambda: avoiders[avoidance].build(config))
     evaluator = Evaluator(
         build_simulation_factory(config),
-        bundle.controller_factory,
+        controller_factory,
         FitnessFunction(FitnessWeights.from_dict(config["fitness"])),
         EvaluationSettings.from_dict(training),
     )
@@ -66,16 +79,25 @@ def _build_session(config: dict, maps: Sequence[MapData]) -> TrainingSession:
         train_count=training["scenarios_per_candidate"],
         validation_count=training["validation_scenarios"],
         fixed_maps=maps,
-        resample_every=training["resample_scenarios_every"],
+        # Un algoritmo que aprende una ruta por mapa no puede cambiar de mapas en cada generación.
+        resample_every=training["resample_scenarios_every"] if bundle.strategy.generalizes else 0,
     )
     return TrainingSession(bundle.strategy, evaluator, scenarios,
                            visible_agents=training["visible_agents"], validate_every=training["validate_every"],
-                           max_iterations=training.get("max_iterations", 0))
+                           max_iterations=training.get("max_iterations", 0), avoidance=avoidance)
 
 
 def with_strategy(config: dict, strategy: str) -> dict:
     """Copia de la configuración con otro algoritmo de aprendizaje elegido."""
     return deep_merge(config, {"training": {"strategy": strategy}})
+
+
+def with_choices(config: dict, strategy: Optional[str] = None, avoidance: Optional[str] = None,
+                 map_mode: Optional[str] = None) -> dict:
+    """Copia de la configuración con las elecciones del usuario: navegación, evasión y tipo de mapas."""
+    training = {key: value for key, value in (("strategy", strategy), ("avoidance", avoidance)) if value}
+    generator = {"navigation_mode": map_mode} if map_mode else {}
+    return deep_merge(config, {"training": training, "generator": generator})
 
 
 def build_training_session(config: dict, fixed_maps: Sequence[MapData] = ()) -> TrainingSession:
@@ -114,6 +136,7 @@ def finish_run(session: TrainingSession, config: dict, directory: Union[str, Pat
         return None
     strategy = session.strategy
     plugin = discover_plugins().get(strategy.name)
+    avoider = discover_avoidance().get(session.avoidance)
     scenarios = session.scenarios
     record = RunRecord(
         run_id=run_id,
@@ -127,6 +150,10 @@ def finish_run(session: TrainingSession, config: dict, directory: Union[str, Pat
         validation_seeds=scenarios.validation_seeds() if strategy.generalizes else [],
         fixed_maps=[m.name for m in scenarios.fixed_maps],
         history=[h.to_dict() for h in session.history],
+        avoidance=session.avoidance,
+        avoidance_label=avoider.label if avoider is not None else session.avoidance,
+        map_mode=config["generator"]["navigation_mode"],
+        resampled=scenarios.resample_every > 0,
     )
     save_run(record, directory)
     return record

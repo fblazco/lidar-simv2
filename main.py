@@ -1,7 +1,7 @@
 """Punto de entrada.
 
     python main.py                                    abre la aplicación (editor + simulación)
-    python main.py train --strategy aco_rules         entrena sin ventana con el algoritmo elegido
+    python main.py train --strategy genetic --avoidance ftg   entrena sin ventana con la combinación elegida
     python main.py runs                               lista las corridas terminadas
     python main.py compare genetic aco_rules          compara dos corridas
 """
@@ -11,10 +11,11 @@ import argparse
 import sys
 from pathlib import Path
 
-from bootstrap import (available_strategies, build_training_session, finish_run, load_training_session,
-                       save_training_session, with_strategy)
+from bootstrap import (available_avoidance, available_strategies, build_training_session, finish_run,
+                       load_training_session, save_training_session, with_choices)
 from config import load_config
-from optimization.results import format_comparison, format_summary, list_runs, load_run
+from control.avoidance import DEFAULT as LEARNED
+from optimization.results import MAP_MODES, format_comparison, format_summary, list_runs, load_run
 from optimization.training import TrainingLog
 
 PROJECT_DIR = Path(__file__).resolve().parent
@@ -36,18 +37,19 @@ def run_training(args) -> None:
         session, config = load_training_session(args.resume)
         print(f"Reanudando desde {args.resume} (generación {session.strategy.iteration})")
     else:
-        config = load_config(args.config)
-        if args.strategy:
-            config = with_strategy(config, args.strategy)
+        config = with_choices(load_config(args.config), args.strategy, args.avoidance, args.maps)
         session = build_training_session(config)
-    name = args.name or session.strategy.name
+    default_name = session.strategy.name + ("" if session.avoidance == LEARNED else f"_{session.avoidance}")
+    name = args.name or default_name
     session.visible_agents = 0                # sin ventana no hay agentes visibles
     checkpoint = base / "models" / f"{name}.npz"
     log = TrainingLog(base / "logs" / f"{name}.jsonl")
     every = config["training"].get("checkpoint_every", 0)
     validation_seeds = session.scenarios.validation_seeds() if session.strategy.generalizes else "no aplica"
-    print(f"Algoritmo: {session.strategy.name} | semilla: {session.scenarios.seed} | "
-          f"semillas de validación: {validation_seeds}")
+    resampling = "nuevos en cada generación" if session.scenarios.resample_every else "fijos"
+    print(f"Navegación: {session.strategy.name} | evasión: {session.avoidance} | "
+          f"mapas: {config['generator']['navigation_mode']}, {resampling} | semilla: {session.scenarios.seed}")
+    print(f"Semillas de validación: {validation_seeds}")
     try:
         for _ in range(args.generations):
             stats = session.run_iteration()
@@ -79,11 +81,30 @@ def show_runs(args) -> None:
     records = list_runs(runs_dir(args.base_dir))
     if not records:
         print("No hay corridas terminadas todavía.")
+        return
+    avoiders, strategies = available_avoidance(), available_strategies()
+    rows = [("corrida", "navegación", "evasión", "gen.", "éxito val.", "IC 95 %", "colis. val.", "efic. val.", "éxito entr.")]
     for record in records:
         metrics = record.metrics()
-        print(f"{record.run_id:<28} {record.strategy:<11} {metrics['iterations']:4d} gen.  "
-              f"mejor {metrics['best_fitness']:7.1f}  éxito {metrics['final_success_rate'] * 100:5.1f} %  "
-              f"{record.finished_at}")
+
+        def percent(key):
+            return "-" if metrics[key] is None else f"{metrics[key] * 100:.0f} %"
+
+        interval = metrics["validation_interval"]
+        rows.append((
+            record.run_id,
+            strategies[record.strategy].short_label if record.strategy in strategies else record.strategy,
+            avoiders[record.avoidance].short_label if record.avoidance in avoiders else record.avoidance,
+            str(metrics["iterations"]),
+            percent("validation_success_rate"),
+            "-" if interval is None else f"{interval[0] * 100:.0f}-{interval[1] * 100:.0f} %",
+            percent("validation_collision_rate"),
+            percent("validation_efficiency"),
+            percent("recent_success_rate"),
+        ))
+    widths = [max(len(row[i]) for row in rows) for i in range(len(rows[0]))]
+    for row in rows:
+        print("  ".join(cell.ljust(widths[i]) for i, cell in enumerate(row)).rstrip())
 
 
 def show_comparison(args) -> None:
@@ -93,6 +114,7 @@ def show_comparison(args) -> None:
 
 def main(argv=None) -> None:
     strategies = ", ".join(sorted(available_strategies())) or "ninguno instalado"
+    avoiders = ", ".join(available_avoidance())
     parser = argparse.ArgumentParser(
         description="Simulador 2D de navegación autónoma con LiDAR y algoritmos evolutivos")
     parser.add_argument("--config", help="archivo JSON con los parámetros que se quieren cambiar")
@@ -100,7 +122,9 @@ def main(argv=None) -> None:
     commands = parser.add_subparsers(dest="command")
 
     train = commands.add_parser("train", help="entrenar sin ventana gráfica")
-    train.add_argument("--strategy", help=f"algoritmo de aprendizaje ({strategies}); por defecto, el de la configuración")
+    train.add_argument("--strategy", help=f"algoritmo de navegación ({strategies}); por defecto, el de la configuración")
+    train.add_argument("--avoidance", help=f"algoritmo de evasión de obstáculos ({avoiders})")
+    train.add_argument("--maps", choices=sorted(MAP_MODES), help="tipo de mapas aleatorios: libres, con ruta o mixtos")
     train.add_argument("--generations", type=int, default=10)
     train.add_argument("--config", help="archivo JSON con los parámetros que se quieren cambiar")
     train.add_argument("--resume", help="checkpoint .npz desde el que continuar")

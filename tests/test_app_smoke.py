@@ -200,13 +200,14 @@ def test_training_algorithm_is_chosen_in_the_window(app):
     app.set_mode("simulation")
     view = app.simulation_view
     view.set_sub_mode("training")
-    assert view.strategy_names == ["aco_routes", "aco_rules", "genetic"]
+    assert view.strategy_names == ["aco_routes", "aco_rules", "genetic", "reactive"]
     assert view.selected_strategy == "genetic"
     view.cycle_strategy(1)
-    assert view.selected_strategy == "aco_routes"
-    view.cycle_strategy(-1)
-    view.cycle_strategy(-1)
-    assert view.selected_strategy == "aco_rules"          # la lista es circular
+    assert view.selected_strategy == "reactive"
+    view.cycle_strategy(1)
+    assert view.selected_strategy == "aco_routes"          # la lista es circular
+    view.cycle_strategy(1)
+    assert view.selected_strategy == "aco_rules"
     view.new_training()
     assert view.session.strategy.name == "aco_rules"
     view.select_strategy("genetic")
@@ -328,3 +329,74 @@ def test_best_route_pilot_drives_one_of_the_maps_the_colony_trained_on(app):
     assert view.simulation.world.map.fingerprint() in trained
     assert "entren" in view.message.lower()
     app.run_frames(10)
+
+
+# --- evasión de obstáculos y tipo de mapas ------------------------------------------------------
+
+def test_avoidance_and_map_kind_are_chosen_in_the_window(app):
+    app.set_mode("simulation")
+    view = app.simulation_view
+    view.set_sub_mode("training")
+    assert view.avoidance_names == ["learned", "apf", "ftg"] and view.selected_avoidance == "learned"
+    view.cycle_avoidance(1)
+    assert view.selected_avoidance == "apf"
+    view.cycle_avoidance(-2)
+    assert view.selected_avoidance == "ftg"                  # la lista es circular
+    assert view.map_modes == ["free", "route", "mixed"] and view.selected_map_mode == "free"
+    view.cycle_map_mode(1)
+    assert view.selected_map_mode == "route"
+    view.select_strategy("reactive")
+    view.start_training()
+    app.run_frames(3)
+    session = view.session
+    assert (session.strategy.name, session.avoidance) == ("reactive", "ftg")
+    run = next(r for r in session.visible if r is not None)
+    assert type(run.controller).__name__ == "AvoidanceController"
+    assert run.scenario.map_data.navigation_mode == "route"
+    view.select_avoidance("apf")
+    assert session.avoidance == "ftg"                         # la selección se aplica al próximo entrenamiento
+
+
+def test_run_record_keeps_the_avoidance_and_maps_chosen_in_the_window(app):
+    app.set_mode("simulation")
+    view = app.simulation_view
+    view.select_strategy("reactive")
+    view.select_avoidance("apf")
+    train_one_generation(app)
+    record = view.finish_training()
+    assert (record.strategy, record.avoidance, record.map_mode, record.resampled) == ("reactive", "apf", "free", True)
+    assert "APF" in dict(view.results.summary())["Evasión de obstáculos"]
+    app.run_frames(3)
+    assert len(distinct_colors(app.screen)) > 5
+
+
+def test_comparison_in_the_window_says_whether_the_difference_is_significant(app):
+    app.set_mode("simulation")
+    view = app.simulation_view
+    view.select_strategy("reactive")
+    view.select_avoidance("ftg")
+    train_one_generation(app)
+    view.finish_training()
+    view.select_avoidance("apf")
+    view.new_training()
+    train_one_generation(app)
+    view.finish_training()
+    newest, older = (r.run_id for r in view.results.records[:2])
+    assert view.results.selected == [newest, older]          # la combinación anterior queda como rival
+    assert "significativa" in view.results.significance()
+    app.run_frames(3)
+    assert len(distinct_colors(app.screen)) > 6
+
+
+def test_loading_a_checkpoint_restores_the_choices_it_was_trained_with(app):
+    app.set_mode("simulation")
+    view = app.simulation_view
+    view.select_strategy("aco_rules")
+    view.select_avoidance("ftg")
+    train_one_generation(app)
+    path = view.save_checkpoint()
+    view.select_strategy("genetic")
+    view.select_avoidance("learned")
+    view.load_checkpoint(path)
+    assert (view.selected_strategy, view.selected_avoidance) == ("aco_rules", "ftg")
+    assert view.session.avoidance == "ftg"

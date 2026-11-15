@@ -8,7 +8,8 @@ fitness = FitnessFunction(FitnessWeights())
 
 def metrics(**overrides):
     data = dict(progress=0.5, reached_goal=False, collided=False, stalled=False, time=20.0, time_limit=40.0,
-                distance=10.0, mean_deviation=0.0, steering_change=0.0, acceleration_change=0.0)
+                distance=10.0, mean_deviation=0.0, steering_change=0.0, acceleration_change=0.0,
+                reference_length=10.0, min_clearance=1.0)
     data.update(overrides)
     return EpisodeMetrics(**data)
 
@@ -55,5 +56,20 @@ def test_aggregate_is_the_mean_over_scenarios():
 
 
 def test_weights_come_from_configuration():
-    custom = FitnessFunction(FitnessWeights.from_dict({"progress": 10.0, "goal": 0.0, "time_bonus": 0.0}))
+    custom = FitnessFunction(FitnessWeights.from_dict(
+        {"progress": 10.0, "goal": 0.0, "time_bonus": 0.0, "efficiency": 0.0}))
     assert custom(metrics(progress=1.0, reached_goal=True)) == pytest.approx(10.0)
+
+
+def test_path_efficiency_compares_the_distance_driven_with_the_shortest_path():
+    assert metrics(reached_goal=True, distance=10.0, reference_length=10.0).path_efficiency == 1.0
+    assert metrics(reached_goal=True, distance=20.0, reference_length=10.0).path_efficiency == 0.5
+    assert metrics(reached_goal=True, distance=9.0, reference_length=10.0).path_efficiency == 1.0   # nunca más de 1
+    assert metrics(reached_goal=False, distance=10.0, reference_length=10.0).path_efficiency == 0.0
+
+
+def test_a_shorter_path_to_the_goal_scores_higher():
+    direct = fitness(metrics(progress=1.0, reached_goal=True, distance=10.0, reference_length=10.0))
+    detour = fitness(metrics(progress=1.0, reached_goal=True, distance=25.0, reference_length=10.0))
+    assert direct - detour == pytest.approx(FitnessWeights().efficiency * 0.6)
+    assert FitnessWeights().efficiency > 0

@@ -48,36 +48,40 @@ def draw_fitness_chart(surface, fonts: Fonts, rect: pygame.Rect, history: List[I
                                            ("promedio", ACCENT, [h.mean_fitness for h in history])])
 
 
-def draw_training_stats(panel: Panel, session: TrainingSession, plugin=None) -> None:
+def draw_training_stats(panel: Panel, session: TrainingSession, plugin=None, avoider=None) -> None:
     """Estadísticas generales, las propias del algoritmo (con las etiquetas de su plugin) y el gráfico."""
     done, total = session.evaluated
     limit = f" de {session.max_iterations}" if session.max_iterations else ""
-    panel.text(f"Generación actual: {session.current_iteration}{limit}")
-    panel.text(f"Individuos evaluados: {done} / {total}")
-    panel.text(f"Evaluaciones totales: {session.evaluations + done}")
-    panel.gap(4)
+    name = plugin.short_label if plugin is not None else session.strategy.name
+    avoidance = avoider.short_label if avoider is not None else session.avoidance
+    panel.text(f"{name} + evasión {avoidance}", ACCENT)
+    panel.text(f"Generación {session.current_iteration}{limit} · evaluados {done}/{total}")
+    panel.text(f"Evaluaciones totales: {session.evaluations + done}", MUTED, 12)
+    panel.gap(2)
     last: Optional[IterationStats] = session.history[-1] if session.history else None
     if last is None:
         panel.text("Aún no terminó ninguna generación.", MUTED)
     else:
+        episodes = max(last.iteration_episodes, 1)
         panel.text(f"Última generación ({last.iteration})", ACCENT)
-        panel.text(f"Mejor fitness:    {last.best_fitness:8.1f}")
-        panel.text(f"Fitness promedio: {last.mean_fitness:8.1f}")
-        panel.text(f"Tasa de éxito:    {last.success_rate * 100:7.1f} %")
-        panel.text(f"Colisiones:       {last.collisions:8d}")
-        panel.text(f"Distancia media:  {last.mean_distance:8.1f}")
-        panel.text(f"Tiempo medio:     {last.mean_time:8.1f} s")
+        panel.text(f"Fitness  mejor {last.best_fitness:6.1f}  prom. {last.mean_fitness:6.1f}", TEXT, 12)
+        panel.text(f"Éxito {last.success_rate * 100:5.1f} %   colisiones {last.collisions / episodes * 100:5.1f} %", TEXT, 12)
+        panel.text(f"Eficiencia del camino {last.path_efficiency * 100:5.1f} %", TEXT, 12)
+        panel.text(f"Distancia {last.mean_distance:5.1f}   tiempo {last.mean_time:5.1f} s", TEXT, 12)
         if last.validation_fitness is not None:
-            panel.text(f"Validación: fitness {last.validation_fitness:.1f}, "
-                       f"éxito {last.validation_success_rate * 100:.0f} %", TEXT, 12)
+            crashed = last.validation_collisions / max(last.validation_episodes, 1) * 100
+            panel.text(f"Validación ({last.validation_episodes} mapas no vistos)", ACCENT, 12)
+            panel.text(f"Éxito {last.validation_success_rate * 100:5.1f} %   colisiones {crashed:5.1f} %", TEXT, 12)
+            if last.validation_efficiency is not None:
+                panel.text(f"Eficiencia {last.validation_efficiency * 100:5.1f} %   "
+                           f"tiempo {last.validation_time:4.1f} s", TEXT, 12)
         elif not session.strategy.generalizes:
             panel.text("Validación: no aplica (una ruta por mapa)", MUTED, 12)
         if last.strategy:
             labels = plugin.stat_labels if plugin is not None else {}
-            panel.gap(4)
-            panel.text(plugin.short_label if plugin is not None else session.strategy.name, ACCENT)
+            panel.gap(2)
             for key, value in last.strategy.items():
-                panel.text(f"{labels.get(key, key)}: {value:.3g}", TEXT, 12)
+                panel.text(f"{labels.get(key, key)}: {value:.3g}", MUTED, 12)
     panel.gap(4)
     height = max(70, min(170, panel.rect.bottom - panel.y - 56))   # deja sitio al mensaje de estado
     draw_fitness_chart(panel.surface, panel.fonts, panel.reserve(height), session.history)

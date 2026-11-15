@@ -2,6 +2,28 @@
 
 Historial resumido. El detalle de cada tarea está en `reports/`.
 
+## 0.3.0 — 2026-11-15
+
+Mapas nuevos por generación, camino más corto y evasión con FTG y APF.
+Informe: `reports/2026-11-15-mapas-aleatorios-ftg-apf.md`.
+
+- Rumbo del proyecto: aplicación educativa y estadística para comparar
+  algoritmos de camino más corto y de evasión (la parte educativa, postergada).
+- Cada generación se entrena con mapas aleatorios nuevos; la validación pasa a
+  20 mapas fijos. La colonia de rutas conserva mapas fijos.
+- Los mapas aleatorios son de navegación libre por defecto, con obstáculos y
+  paredes entre el inicio y el destino. Selector "Mapas" y `--maps`.
+- Largo del camino más corto por mapa; eficiencia del camino y holgura mínima
+  en las métricas; la eficiencia suma al fitness.
+- Capa de evasión de obstáculos componible con cualquier navegación
+  (`control/avoidance/`): aprendida, FTG (Follow the Gap) y APF (campos
+  potenciales). Selector "Evasión" y `--avoidance`.
+- Navegación de referencia sin aprendizaje (`reactive`), para medir FTG y APF
+  por sí solos.
+- Comparación estadística: colisiones, eficiencia, holgura, intervalo de
+  confianza del éxito en validación y prueba de significancia. `main.py runs`
+  muestra una tabla con todas las corridas.
+
 ## 0.2.0 — 2026-11-14
 
 Algoritmo a elección, colonias de hormigas y comparación de corridas.

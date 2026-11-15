@@ -24,18 +24,34 @@
 
 ## Entrenamiento
 
-- **Generaliza poco con la configuración por defecto.** Tras 40 generaciones el
-  mejor individuo llega al destino en sus tres escenarios de entrenamiento,
-  pero solo en 1 de los 5 de validación. Los tres escenarios son fijos durante
-  todo el entrenamiento, así que la población se especializa en ellos. Es de
-  esperar que ayude poner `training.resample_scenarios_every` en 1 o subir
-  `training.scenarios_per_candidate`; todavía no se midió (etapa 11 del roadmap).
+- **Las curvas de entrenamiento son ruidosas.** Con mapas nuevos en cada
+  generación, el mismo individuo puntúa distinto de una generación a otra: el
+  mejor fitness sube y baja, y un élite puede perder su lugar por mala suerte
+  con los mapas. La cifra estable es la validación.
+- **"Lo aprendido" es el mejor de la última generación**, no el de mejor
+  validación; con ruido, puede no ser el mejor modelo de la corrida.
 - Con velocidad x1 una generación dura lo que tarden los individuos visibles.
   Subir la velocidad o poner `visible_agents` en 0 la acorta.
 - Un checkpoint solo se puede reanudar con la misma arquitectura de red y el
   mismo tamaño de población con que se guardó (se informa con un error claro).
 - Los checkpoints se guardan en el límite entre generaciones: una generación a
   medio evaluar se repite al reanudar.
+- Un modelo entrenado con una evasión no sirve con otra: aprendió a proponer
+  intenciones para esa capa.
+
+## Evasión de obstáculos
+
+- **FTG** gira a fondo ante cualquier obstáculo dentro de su distancia libre y
+  suele dar rodeos amplios; puede chocar con obstáculos móviles que llegan de
+  costado, fuera de su campo de visión de 200°.
+- **APF** puede quedar atrapado frente a paredes anchas (mínimo local) y oscila
+  en pasos estrechos; la componente tangencial resuelve el obstáculo aislado
+  alineado con el destino, no una pared.
+- Ninguno de los dos da marcha atrás: el vehículo no la tiene habilitada.
+- La **referencia sin aprendizaje** evalúa un solo controlador por generación
+  (3 episodios): sus cifras por generación valen poco; hay que mirar la validación.
+- El **camino más corto** de referencia no deja holgura para el cuerpo del
+  vehículo, así que la eficiencia es algo pesimista cuando hay que rodear algo.
 
 ## Colonias de hormigas
 

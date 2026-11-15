@@ -102,7 +102,7 @@ def tiny_config(**training):
         "map": {"cols": 16, "rows": 10}, "simulation": {"max_time": 6.0}, "policy": {"hidden_layers": [4]},
         "generator": {"static_obstacles": [1, 2], "dynamic_obstacles": [1, 1]},
         "training": {"population_size": 6, "visible_agents": 0, "scenarios_per_candidate": 2,
-                     "validation_scenarios": 2, "stall_time": 1.5, **training},
+                     "validation_scenarios": 2, "stall_time": 1.5, "resample_scenarios_every": 0, **training},
     })
 
 
@@ -152,3 +152,107 @@ def test_cli_trains_with_the_chosen_algorithm_then_lists_and_compares_runs(tmp_p
 
     missing = run_cli("compare", "genetic", "no_existe", "--base-dir", str(tmp_path))
     assert missing.returncode != 0 and "no_existe" in missing.stderr
+
+
+# --- evasión de obstáculos y estadística de la comparación -------------------------------------
+
+from optimization.results import validation_significance, wilson_interval
+
+
+def validated(iteration, successes, episodes=20, collisions=2, efficiency=0.9, **kwargs):
+    """Estadísticas de una iteración con validación detallada."""
+    item = stats(iteration, 600.0, 200.0, 0.5, validation=100.0, **kwargs)
+    item.validation_success_rate = successes / episodes
+    item.validation_episodes = episodes
+    item.validation_collisions = collisions
+    item.validation_efficiency = efficiency
+    item.validation_time = 9.0
+    item.iteration_episodes = 20
+    item.path_efficiency = 0.8
+    item.min_clearance = 0.6
+    return item
+
+
+def test_record_remembers_the_avoidance_algorithm_and_the_kind_of_maps():
+    saved = record(avoidance="ftg", avoidance_label="FTG: Follow the Gap", map_mode="free", resampled=True)
+    rows = dict(summary_rows(saved))
+    assert rows["Evasión de obstáculos"] == "FTG: Follow the Gap"
+    assert rows["Mapas"] == "navegación libre, nuevos en cada generación"
+    assert record().avoidance == "learned"                    # las corridas anteriores no tenían capa de evasión
+
+
+def test_records_saved_before_these_fields_existed_still_load(tmp_path):
+    path = save_run(record("vieja"), tmp_path)
+    data = json.loads(path.read_text(encoding="utf-8"))
+    for key in ("avoidance", "avoidance_label", "map_mode", "resampled"):
+        data.pop(key)
+    for item in data["history"]:
+        for key in ("iteration_episodes", "validation_episodes", "validation_collisions", "path_efficiency"):
+            item.pop(key, None)
+    path.write_text(json.dumps(data), encoding="utf-8")
+    old = load_run(path)
+    assert old.avoidance == "learned" and old.metrics()["validation_success_rate"] == 0.4
+
+
+def test_metrics_cover_obstacle_avoidance_and_shortest_path():
+    metrics = record(history=[validated(1, 6), validated(2, 12, collisions=1, efficiency=0.95)]).metrics()
+    assert metrics["validation_success_rate"] == 0.6 and metrics["best_validation_success_rate"] == 0.6
+    assert metrics["validation_collision_rate"] == pytest.approx(0.05)
+    assert metrics["validation_efficiency"] == 0.95 and metrics["validation_time"] == 9.0
+    assert metrics["recent_success_rate"] == 0.5 and metrics["recent_collision_rate"] == pytest.approx(0.25)
+    assert metrics["path_efficiency"] == 0.8 and metrics["min_clearance"] == 0.6
+    low, high = metrics["validation_interval"]
+    assert low < 0.6 < high
+
+
+def test_wilson_interval_bounds_a_success_rate():
+    low, high = wilson_interval(8, 20)
+    assert low == pytest.approx(0.219, abs=0.005) and high == pytest.approx(0.613, abs=0.005)
+    assert wilson_interval(0, 20)[0] == 0.0 and wilson_interval(20, 20)[1] == 1.0
+    assert wilson_interval(0, 0) == (0.0, 1.0)
+
+
+def test_significance_tells_real_differences_from_noise():
+    strong = record("a", history=[validated(1, 18)])
+    weak = record("b", history=[validated(1, 4)])
+    close = record("c", history=[validated(1, 16)])
+    assert "p < 0.001" in validation_significance(strong, weak) and " es estadísticamente" in validation_significance(strong, weak)
+    assert "no es estadísticamente" in validation_significance(strong, close)
+    assert validation_significance(strong, record("d", generalizes=False)) is None      # sin validación no hay prueba
+
+
+def test_comparison_shows_avoidance_and_the_new_metrics():
+    learned = record("a", history=[validated(1, 8, collisions=6, efficiency=0.80)])
+    ftg = record("b", avoidance="ftg", avoidance_label="FTG: Follow the Gap",
+                 history=[validated(1, 14, collisions=2, efficiency=0.93)])
+    rows = {label: (a, b, winner) for label, a, b, winner in compare_runs(learned, ftg)}
+    assert rows["Evasión de obstáculos"] == ("Aprendida por el propio algoritmo", "FTG: Follow the Gap", None)
+    assert rows["Éxito en validación"] == ("40.0 %", "70.0 %", "b")
+    assert rows["Colisiones en validación"] == ("30.0 %", "10.0 %", "b")
+    assert rows["Eficiencia del camino en validación"] == ("80.0 %", "93.0 %", "b")
+    assert rows["Intervalo de confianza 95 %"][2] is None and "%" in rows["Intervalo de confianza 95 %"][0]
+
+
+def test_cli_combines_navigation_avoidance_and_map_kind(tmp_path):
+    config = tmp_path / "tiny.json"
+    config.write_text(json.dumps({
+        "map": {"cols": 16, "rows": 10}, "simulation": {"max_time": 4.0},
+        "training": {"scenarios_per_candidate": 1, "validation_scenarios": 2, "stall_time": 1.0, "checkpoint_every": 0},
+    }))
+    base = ["--config", str(config), "--base-dir", str(tmp_path)]
+    first = run_cli("train", "--strategy", "reactive", "--avoidance", "ftg", "--generations", "2", *base)
+    second = run_cli("train", "--strategy", "reactive", "--avoidance", "apf", "--maps", "route",
+                     "--generations", "2", *base)
+    assert first.returncode == 0, first.stderr
+    assert second.returncode == 0, second.stderr
+    ftg = load_run(tmp_path / "logs" / "runs" / "reactive_ftg.json")
+    apf = load_run(tmp_path / "logs" / "runs" / "reactive_apf.json")
+    assert (ftg.avoidance, ftg.map_mode, ftg.resampled) == ("ftg", "free", True)
+    assert (apf.avoidance, apf.map_mode) == ("apf", "route")
+    listed = run_cli("runs", "--base-dir", str(tmp_path))
+    assert "FTG" in listed.stdout and "APF" in listed.stdout
+    compared = run_cli("compare", "reactive_ftg", "reactive_apf", "--base-dir", str(tmp_path))
+    assert compared.returncode == 0, compared.stderr
+    assert "Evasión de obstáculos" in compared.stdout and "significativa" in compared.stdout
+    bad = run_cli("train", "--avoidance", "dwa", "--generations", "1", *base)
+    assert bad.returncode != 0 and "ftg" in bad.stderr

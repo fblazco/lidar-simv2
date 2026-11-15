@@ -22,13 +22,14 @@ class GeneratorConfig:
     cols: int = 32
     rows: int = 20
     cell_size: float = 1.0
-    navigation_mode: str = ROUTE_FOLLOWING        # "route", "free" o "mixed"
+    navigation_mode: str = FREE_NAVIGATION        # "free", "route" o "mixed"
     control_points: Tuple[int, int] = (2, 4)      # puntos intermedios del camino (mín, máx)
     static_obstacles: Tuple[int, int] = (3, 8)
     dynamic_obstacles: Tuple[int, int] = (1, 3)
     speed_range: Tuple[float, float] = (0.8, 2.5)
     pause_range: Tuple[float, float] = (0.3, 1.5)
-    on_route_fraction: float = 0.4                # obstáculos estáticos puestos sobre el camino
+    on_route_fraction: float = 0.4                # obstáculos estáticos puestos sobre el eje inicio-destino
+    wall_chance: float = 0.5                      # probabilidad de que un obstáculo continúe al anterior (pared)
 
     @classmethod
     def from_dict(cls, data: dict) -> "GeneratorConfig":
@@ -59,13 +60,19 @@ class MapGenerator:
         mode = cfg.navigation_mode
         if mode == "mixed":
             mode = FREE_NAVIGATION if rng.random() < 0.5 else ROUTE_FOLLOWING
+        if mode == FREE_NAVIGATION:
+            # Sin camino dibujado: los obstáculos se reparten en torno a la recta inicio-destino,
+            # para que llegar por el camino más corto exija esquivarlos.
+            axis, ahead, route = line_cells(start, goal), goal, []
+        else:
+            axis = route
         map_data = MapData(
             name=f"aleatorio_{seed}", cols=cfg.cols, rows=cfg.rows, cell_size=cfg.cell_size,
             navigation_mode=mode, route=route, start=start, goal=goal, seed=seed,
             start_heading=math.atan2(ahead[1] - start[1], ahead[0] - start[0]),
         )
-        static = self._static_obstacles(rng, map_data)
-        dynamic = self._dynamic_obstacles(rng, map_data)
+        static = self._static_obstacles(rng, map_data, axis)
+        dynamic = self._dynamic_obstacles(rng, map_data, axis)
         if static is None or dynamic is None:
             return None
         map_data.static_obstacles = static
@@ -88,17 +95,23 @@ class MapGenerator:
             route.extend(line_cells(a, b)[1:])
         return route
 
-    def _static_obstacles(self, rng: np.random.Generator, m: MapData) -> Optional[list]:
+    def _static_obstacles(self, rng: np.random.Generator, m: MapData, axis: list) -> Optional[list]:
         cfg = self.config
         count = int(rng.integers(cfg.static_obstacles[0], cfg.static_obstacles[1] + 1))
         placed: list = []
         for _ in range(count * 40):
             if len(placed) == count:
                 break
-            base = m.route[int(rng.integers(5, len(m.route) - 5))]
-            cell = base
-            if rng.random() >= cfg.on_route_fraction:
-                cell = (base[0] + int(rng.integers(-3, 4)), base[1] + int(rng.integers(-3, 4)))
+            if placed and rng.random() < cfg.wall_chance:      # continúa al obstáculo anterior: forma una pared
+                dc, dr = ((1, 0), (-1, 0), (0, 1), (0, -1))[int(rng.integers(4))]
+                cell = (placed[-1][0] + dc, placed[-1][1] + dr)
+                if min(max(abs(cell[0] - a[0]), abs(cell[1] - a[1])) for a in axis) > 4:
+                    continue
+            else:
+                base = axis[int(rng.integers(5, len(axis) - 5))]
+                cell = base
+                if rng.random() >= cfg.on_route_fraction:
+                    cell = (base[0] + int(rng.integers(-3, 4)), base[1] + int(rng.integers(-3, 4)))
             near_ends = any(
                 max(abs(cell[0] - e[0]), abs(cell[1] - e[1])) <= PROTECTED_CELLS for e in (m.start, m.goal)
             )
@@ -106,7 +119,7 @@ class MapGenerator:
                 placed.append(cell)
         return placed if len(placed) == count else None
 
-    def _dynamic_obstacles(self, rng: np.random.Generator, m: MapData) -> Optional[list]:
+    def _dynamic_obstacles(self, rng: np.random.Generator, m: MapData, axis: list) -> Optional[list]:
         cfg = self.config
         count = int(rng.integers(cfg.dynamic_obstacles[0], cfg.dynamic_obstacles[1] + 1))
         cs, radius = m.cell_size, 0.4 * m.cell_size
@@ -116,7 +129,7 @@ class MapGenerator:
             if len(placed) == count:
                 break
             kind = OBSTACLE_KINDS[int(rng.integers(len(OBSTACLE_KINDS)))]
-            cx, cy = m.cell_center(m.route[int(rng.integers(6, len(m.route) - 3))])
+            cx, cy = m.cell_center(axis[int(rng.integers(6, len(axis) - 3))])
             spec = DynamicObstacleSpec(
                 kind=kind, x=cx, y=cy, radius=radius,
                 speed=float(rng.uniform(*cfg.speed_range)),

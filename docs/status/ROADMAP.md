@@ -15,6 +15,9 @@ funcionalidad vive en [PROJECT_STATUS.md](PROJECT_STATUS.md).
 | 7. Selección de algoritmo | El usuario elige el algoritmo en la ventana y en la línea de comandos; contratos ampliados para soluciones que dependen del mapa | `test_training`, `test_evaluation`, `test_architecture`, `test_app_smoke`, `test_results` | Cerrada (2026-11-14) |
 | 8. Colonias de hormigas | Plugins `aco_rules` (reglas de conducción) y `aco_routes` (rutas por mapa) con sus controladores | `test_aco_rules`, `test_rule_controller`, `test_aco_routes`, `test_route_controller` | Cerrada (2026-11-14) |
 | 9. Resultados y comparación | Estadísticas al finalizar una corrida, corridas guardadas y comparación de dos | `test_results`, `test_app_smoke` | Cerrada (2026-11-14) |
+| 10. Mapas nuevos por generación y camino más corto | Mapas aleatorios de navegación libre que cambian en cada generación; largo del camino más corto por mapa; eficiencia en las métricas y en el fitness | `test_map_generator`, `test_shortest_path`, `test_fitness`, `test_evaluation`, `test_training` | Cerrada (2026-11-15) |
+| 11. Evasión de obstáculos a elección | Capa de evasión componible con cualquier navegación: aprendida, FTG y APF; navegación de referencia sin aprendizaje | `test_avoidance`, `test_architecture`, `test_app_smoke` | Cerrada (2026-11-15) |
+| 12. Comparación estadística | Registro de la evasión y del tipo de mapas; colisiones, eficiencia y holgura; intervalo de confianza y prueba de significancia sobre la validación | `test_results`, `test_app_smoke` | Cerrada (2026-11-15) |
 
 ## Etapas siguientes (propuesta)
 
@@ -23,10 +26,10 @@ editando esta tabla o creando una solicitud en `requests/open/`.
 
 | Etapa | Objetivo | Se da por cerrada cuando |
 |---|---|---|
-| 10. Revisión manual de la interfaz | Recorrer a mano cada herramienta del editor y cada control de la simulación en una ventana real, y corregir lo que aparezca | Lista de comprobación completa, sin fallos abiertos en `KNOWN_ISSUES.md` |
-| 11. Generalización del aprendizaje | Que lo aprendido sirva en mapas no vistos: medir el efecto de remuestrear escenarios y de usar más escenarios por individuo; ajustar fitness, operadores y la tabla de reglas | La tasa de éxito en validación se acerca a la de entrenamiento |
-| 12. PSO | Plugin `optimization/pso/` que reutiliza la fábrica de controladores MLP | PSO entrena y se compara con los demás sin modificar nada fuera de su carpeta |
-| 13. ABC | Plugin `optimization/abc/` con employed, onlooker y scout bees | Igual que la etapa 12 |
-| 14. Rendimiento | Evaluar candidatos en procesos paralelos; entrenar en segundo plano | Una generación de 50 individuos tarda claramente menos que hoy |
+| 13. Aplicación educativa | El rumbo que fijó el usuario y pidió postergar: explicar cada algoritmo dentro de la aplicación y mostrar lo que "piensa" (huecos de FTG, fuerzas de APF, tabla de reglas, feromonas) | A definir con el usuario |
+| 14. Comparación con más rigor | Varias semillas por combinación, comparar más de dos corridas a la vez, exportar tablas | Las conclusiones no dependen de una sola semilla |
+| 15. Revisión manual de la interfaz | Recorrer a mano cada vista en una ventana real y corregir lo que aparezca | Lista de comprobación completa |
+| 16. Más algoritmos | Navegación: PSO, ABC. Evasión: DWA, VFH | Cada uno entra como plugin sin tocar nada fuera de su archivo o carpeta |
+| 17. Rendimiento | Evaluar candidatos en procesos paralelos; entrenar en segundo plano | Una generación de 50 individuos tarda claramente menos que hoy |
 
 Más ideas, sin orden ni compromiso: [BACKLOG.md](BACKLOG.md).

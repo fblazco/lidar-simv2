@@ -15,6 +15,7 @@ from typing import List, Optional, Sequence, Tuple
 import numpy as np
 
 from control.controller import Action, Controller, Observation
+from control.rays import relative_ray_angles
 
 STEERINGS = (-1.0, -0.5, 0.0, 0.5, 1.0)
 THROTTLES = (1.0, 0.2, -1.0)                      # acelerar, avanzar despacio, frenar
@@ -39,11 +40,7 @@ class ObservationDiscretizer:
                  mid_distance: float = 2.5) -> None:
         self.near_distance = float(near_distance)
         self.mid_distance = float(mid_distance)
-        if fov_deg >= 360.0:
-            angles = np.arange(num_rays) * (360.0 / num_rays)
-        else:
-            angles = np.linspace(-fov_deg / 2.0, fov_deg / 2.0, num_rays)
-        angles = (angles + 180.0) % 360.0 - 180.0          # relativos al frente, en (-180, 180]
+        angles = np.round(np.degrees(relative_ray_angles(num_rays, fov_deg)), 6)   # relativos al frente
         inner, outer = SIDE_SECTOR_DEG
         self._sectors = (
             np.flatnonzero((angles >= -outer) & (angles < -inner)),    # izquierda

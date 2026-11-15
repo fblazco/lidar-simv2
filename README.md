@@ -1,10 +1,13 @@
 # Simulador LiDAR con algoritmos evolutivos
 
-Simulador 2D de un vehículo autónomo que detecta obstáculos con un sensor LiDAR
-de 72 rayos y **aprende a navegar con el algoritmo que elijas**: un algoritmo
-genético o dos variantes de colonia de hormigas. Incluye un editor visual de
-mapas en ASCII, permite ver varios individuos de una misma generación
-entrenando a la vez y compara los resultados de dos entrenamientos.
+Simulador 2D de un vehículo autónomo con un sensor LiDAR de 72 rayos, pensado
+para **comparar algoritmos de búsqueda del camino más corto y de evasión de
+obstáculos**. Eliges por separado quién aprende a navegar (algoritmo genético,
+colonias de hormigas o una referencia sin aprendizaje) y quién esquiva (lo
+aprendido, Follow the Gap o campos potenciales), entrenas sobre mapas
+aleatorios que cambian en cada generación y comparas las corridas con las
+mismas métricas y su significancia estadística. Incluye un editor visual de
+mapas en ASCII.
 
 ![Entrenamiento con cuatro agentes visibles](docs/images/entrenamiento.png)
 
@@ -21,25 +24,38 @@ LiDAR, su fitness parcial y la evolución del mejor fitness y del promedio.*
   dirección, aceleración y frenado; colisiones; LiDAR por raycasting geométrico.
 - **Dos modos de navegación** con un mismo simulador: seguir la ruta dibujada
   (pudiendo apartarse para esquivar y volver) o navegar libremente al destino.
-- **Tres algoritmos de aprendizaje, a elección**:
+- **Navegación a elección** (quién decide hacia dónde ir):
 
-  | Algoritmo | Qué aprende |
+  | Opción | Qué aprende |
   |---|---|
   | Genético (GA) | Los pesos de una red neuronal que conduce el vehículo |
   | Colonia de hormigas: reglas | Una tabla "situación → maniobra" elegida con feromonas |
   | Colonia de hormigas: rutas | Una ruta, celda a celda, sobre cada mapa de entrenamiento |
+  | Sin aprendizaje | Nada: apunta al objetivo. Es la línea de base |
 
-- **Evaluación comparable**: cada individuo se prueba en varios escenarios
-  aleatorios, iguales para toda la generación y reproducibles por semilla; lo
-  aprendido se valida en mapas que no intervienen en la selección.
+- **Evasión de obstáculos a elección** (quién esquiva), combinable con cualquier
+  navegación:
+
+  | Opción | Cómo esquiva |
+  |---|---|
+  | Aprendida | La navegación aprende a esquivar con lo que ve el LiDAR |
+  | FTG (Follow the Gap) | Encara el hueco más ancho entre los obstáculos |
+  | APF (campos potenciales) | El destino atrae y los obstáculos repelen |
+
+- **Mapas aleatorios nuevos en cada generación**, de navegación libre: lo
+  aprendido no puede memorizar un mapa. El mejor de cada generación se prueba
+  en 20 mapas de validación que nunca intervienen en la selección.
+- **Camino más corto medible**: cada mapa conoce el largo de su camino más
+  corto, y la eficiencia de cada llegada entra en el fitness.
 - **Con o sin ventana**: se entrena viendo `visible_agents` individuos a la vez,
   o desde la terminal sin abrir nada. Hay checkpoints y un registro por generación.
-- **Resultados y comparación**: al finalizar un entrenamiento se muestran sus
-  estadísticas y quedan guardadas; dos corridas se comparan lado a lado, con las
-  mismas métricas y sus curvas superpuestas.
-- **Arquitectura modular**: el simulador no conoce ningún algoritmo de
-  aprendizaje. Cada algoritmo es un plugin en su propia carpeta; agregar otro
-  (PSO, ABC) no exige tocar la física ni el vehículo.
+- **Resultados y comparación estadística**: al finalizar un entrenamiento se
+  muestran sus estadísticas y quedan guardadas; dos corridas se comparan lado a
+  lado (éxito, colisiones, eficiencia del camino, tiempos), con el intervalo de
+  confianza del éxito en validación y una prueba de significancia.
+- **Arquitectura modular**: el simulador no conoce ningún algoritmo. Cada
+  algoritmo de navegación o de evasión es un plugin; agregar otro (PSO, ABC,
+  DWA, VFH) no exige tocar la física ni el vehículo.
 
 ## Requisitos
 
@@ -76,11 +92,12 @@ python3 -m pip install --target .venv/lib/python3.10/site-packages -r requiremen
 1. Se abre el **editor** (F1). Pulsa "Cargar..." y elige `ejemplo_ruta`, o
    dibuja tu propio mapa.
 2. Pasa a **simulación** con F2 y conduce con las flechas o WASD.
-3. Pulsa `T` para la vista de **entrenamiento**, elige el algoritmo con `<` `>`
-   y pulsa `Espacio`. Con `+` aceleras a los agentes visibles.
+3. Pulsa `T` para la vista de **entrenamiento**, elige la navegación, la
+   evasión y el tipo de mapas con `<` `>`, y pulsa `Espacio`. Con `+` aceleras
+   a los agentes visibles.
 4. La corrida termina sola al llegar al límite de generaciones, o cuando pulsas
    `F`. Se abre la vista de **resultados** con sus estadísticas.
-5. Repite con otro algoritmo: al finalizar, las dos corridas aparecen comparadas.
+5. Repite con otra combinación: al finalizar, las dos corridas aparecen comparadas.
 6. Vuelve a `M` y pulsa `P` para ver conducir a lo aprendido.
 
 ## La aplicación
@@ -111,11 +128,11 @@ Tiene tres vistas: **M** manual, **T** entrenar y **C** resultados.
   `P` alterna entre el piloto manual y lo aprendido por el último entrenamiento.
   El vehículo se dibuja como `o` sobre `| |` y su LiDAR está siempre visible. Al
   terminar el episodio aparece su resumen (resultado, tiempo, distancia, fitness).
-- **Entrenar (`T`)**: se elige el algoritmo y el límite de generaciones;
-  `Espacio` inicia o pausa, `F` finaliza, `+` y `-` cambian la velocidad. El
-  panel muestra generación, individuos evaluados, mejor fitness, promedio, tasa
-  de éxito, colisiones, distancia, tiempo, validación, las estadísticas propias
-  del algoritmo y el gráfico de evolución.
+- **Entrenar (`T`)**: se eligen la navegación, la evasión, el tipo de mapas y el
+  límite de generaciones; `Espacio` inicia o pausa, `F` finaliza, `+` y `-`
+  cambian la velocidad. El panel muestra generación, individuos evaluados,
+  fitness, éxito, colisiones, eficiencia del camino, validación, las
+  estadísticas propias del algoritmo y el gráfico de evolución.
 
 ![Colonia de hormigas trazando rutas](docs/images/feromonas.png)
 
@@ -123,7 +140,7 @@ Tiene tres vistas: **M** manual, **T** entrenar y **C** resultados.
 mapa y la línea azul es la ruta que sigue cada hormiga.*
 
 - **Resultados (`C`)**: lista de corridas terminadas. Con una seleccionada se ve
-  su resumen; con dos, la comparación.
+  su resumen; con dos, la comparación y si su diferencia es significativa.
 
 ![Comparación de dos corridas](docs/images/comparacion.png)
 
@@ -132,24 +149,28 @@ Guía completa: [docs/GUIDE.md](docs/GUIDE.md).
 ## Entrenar y comparar sin ventana
 
 ```bash
-.venv/bin/python main.py train --strategy genetic --generations 30
-.venv/bin/python main.py train --strategy aco_rules --generations 30
-.venv/bin/python main.py compare genetic aco_rules
+.venv/bin/python main.py train --strategy genetic --avoidance learned --generations 30
+.venv/bin/python main.py train --strategy genetic --avoidance ftg --generations 30
+.venv/bin/python main.py train --strategy reactive --avoidance apf --generations 30
+.venv/bin/python main.py runs
+.venv/bin/python main.py compare genetic genetic_ftg
 ```
 
-`--strategy` acepta `genetic`, `aco_rules` y `aco_routes`. Cada entrenamiento
-imprime su resumen al terminar y deja el checkpoint en `models/<nombre>.npz`,
-una línea JSON por generación en `logs/<nombre>.jsonl` y el registro de la
-corrida en `logs/runs/<nombre>.json`. `python main.py runs` lista las corridas,
-y `--resume models/<nombre>.npz` continúa una.
+`--strategy` acepta `genetic`, `aco_rules`, `aco_routes` y `reactive`;
+`--avoidance`, `learned`, `ftg` y `apf`; `--maps`, `free`, `route` y `mixed`.
+Cada entrenamiento imprime su resumen al terminar y deja el checkpoint en
+`models/<nombre>.npz`, una línea JSON por generación en `logs/<nombre>.jsonl` y
+el registro de la corrida en `logs/runs/<nombre>.json`. `runs` lista las
+corridas con sus cifras de validación, `compare` imprime la tabla comparativa y
+la prueba de significancia, y `--resume models/<nombre>.npz` continúa una.
 
 ## Configuración
 
 Todos los parámetros ajustables están en
-[config/default.json](config/default.json): algoritmo, población, agentes
-visibles, límite de generaciones, semilla, escenarios, pesos del fitness,
-vehículo, LiDAR, red neuronal, generador de mapas y los parámetros de cada
-algoritmo. Para cambiarlos sin editar ese archivo, crea un JSON solo con lo que
+[config/default.json](config/default.json): navegación, evasión, población,
+agentes visibles, límite de generaciones, semilla, escenarios, pesos del
+fitness, vehículo, LiDAR, red neuronal, generador de mapas y los parámetros de
+cada algoritmo de navegación y de evasión. Para cambiarlos sin editar ese archivo, crea un JSON solo con lo que
 quieras modificar:
 
 ```json
@@ -168,11 +189,13 @@ bootstrap.py         ensambla el sistema a partir de la configuración
 config/              parámetros (default.json)
 simulation/          mundo, vehículo, obstáculos, colisiones, navegación
 sensors/             LiDAR
-control/             contrato Controller y controladores: manual, red MLP, tabla de reglas, seguidor de rutas
+control/             contrato Controller y controladores: manual, red MLP, tabla de reglas, seguidor de rutas, referencia
+control/avoidance/   capa de evasión de obstáculos: aprendida, FTG, APF (plugins)
 optimization/        contrato LearningStrategy, fitness, evaluación, entrenamiento, checkpoints, corridas
 optimization/genetic/      plugin: algoritmo genético
 optimization/aco_rules/    plugin: colonia de hormigas de reglas de conducción
 optimization/aco_routes/   plugin: colonia de hormigas de rutas por mapa
+optimization/reactive/     plugin de referencia: navegación sin aprendizaje
 editor/              modelo del editor, guardado y carga, generador de mapas
 rendering/           dibujo ASCII
 ui/                  ventana, vistas, panel de entrenamiento y resultados
@@ -194,10 +217,10 @@ comprueba. Detalle en [docs/architecture/OVERVIEW.md](docs/architecture/OVERVIEW
 ```
 
 Cubren movimiento, colisiones, LiDAR, trayectorias de obstáculos, mapas,
-reproducibilidad por semilla, los tres algoritmos, fitness, evolución de
-generaciones, corridas y comparación, la aplicación (sin ventana real), la
-independencia entre el simulador y los algoritmos, y los enlaces de esta
-documentación.
+reproducibilidad por semilla, los algoritmos de navegación y de evasión, el
+camino más corto, fitness, evolución de generaciones, corridas, comparación y
+su estadística, la aplicación (sin ventana real), la independencia entre el
+simulador y los algoritmos, y los enlaces de esta documentación.
 
 ## Estado
 

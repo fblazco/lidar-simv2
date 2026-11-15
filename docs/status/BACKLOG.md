@@ -3,10 +3,26 @@
 Ideas y mejoras aún no implementadas. Nada de esto está comprometido: para
 pedir algo, crear una solicitud en `requests/open/`.
 
+## Educación (rumbo fijado por el usuario, postergado a propósito)
+
+- Dibujar lo que decide cada evasor: huecos y hueco elegido de FTG; vectores de
+  atracción, repulsión y resultante de APF.
+- Explicar cada algoritmo dentro de la aplicación, con sus parámetros y su
+  efecto en vivo.
+- Modo paso a paso: avanzar la simulación de a un paso y ver la decisión.
+- Mostrar la tabla de reglas aprendida y qué regla se está aplicando.
+- Escenarios didácticos preparados (mínimo local de APF, pasillo estrecho,
+  obstáculo que cruza).
+
 ## Algoritmos
 
 - Plugin PSO (partículas, velocidad, pBest, gBest) sobre los pesos de la red.
 - Plugin ABC (employed, onlooker, scout, abandono de fuentes).
+- Evasión: DWA (ventana dinámica) y VFH (histograma de campo vectorial).
+- FTG: fórmula original del centro del hueco con las distancias a sus bordes;
+  elegir el hueco más cercano a la dirección deseada en lugar del más ancho.
+- APF: escape de mínimos locales frente a paredes anchas.
+- Entrenar la navegación con una evasión y probarla con otra.
 - Colonia de reglas: más situaciones (velocidad, desvío del camino) o umbrales
   aprendidos en lugar de fijos.
 - Colonia de rutas: suavizar la ruta antes de conducirla; planificar con
@@ -15,8 +31,8 @@ pedir algo, crear una solicitud en `requests/open/`.
 
 ## Entrenamiento
 
-- Medir cuánto mejora la validación al remuestrear escenarios en cada generación
-  y al usar más escenarios por individuo (etapa 11 del roadmap).
+- Elegir el modelo final por su validación, no por la última generación.
+- Más mapas por individuo en cada generación, para reducir el ruido del fitness.
 - Evaluar candidatos en procesos paralelos para acortar cada generación.
 - Seguir entrenando en segundo plano mientras se usa el editor o la conducción manual.
 - Ajustar hiperparámetros de cada algoritmo; decaimiento de sigma por defecto.

@@ -17,6 +17,34 @@ feromonas y construcción de soluciones; ABC con fuentes de alimento y abejas.
 La interfaz común facilita la integración, pero cada algoritmo conserva sus
 mecanismos propios.
 
+## Rumbo: comparación educativa y estadística
+
+> Agregado el 2026-11-15 a pedido del usuario.
+
+La aplicación debe ser **educativa y estadística**: servir para comparar
+distintos algoritmos de **evasión de obstáculos** y de **búsqueda del camino más
+corto**. La parte educativa todavía no se trabaja: primero, los algoritmos y la
+comparación estadística.
+
+## Mapas aleatorios en cada generación
+
+> Agregado el 2026-11-15 a pedido del usuario.
+
+No se entrena en un mapa elegido: cada generación usa mapas aleatorios, de modo
+que a la larga el modelo aprenda a encontrar el camino más corto
+independientemente del mapa en que se lo coloque.
+
+## Evasión de obstáculos a elección
+
+> Agregado el 2026-11-15 a pedido del usuario.
+
+Además de elegir el algoritmo que entrena al modelo en el camino más corto, el
+usuario elige cómo se evitan los obstáculos:
+
+- **Aprendida**, como hasta ahora: el modelo aprende a esquivar.
+- **FTG** (Follow the Gap).
+- **APF** (Artificial Potential Fields).
+
 ## Selección del algoritmo
 
 > Agregado el 2026-11-14 a pedido del usuario.

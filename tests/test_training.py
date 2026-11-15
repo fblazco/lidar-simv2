@@ -19,7 +19,7 @@ def tiny_config(**training):
         "observation": {"use_previous_lidar": False},
         "generator": {"static_obstacles": [1, 2], "dynamic_obstacles": [1, 1]},
         "training": {"population_size": 6, "visible_agents": 0, "scenarios_per_candidate": 2,
-                     "validation_scenarios": 2, "stall_time": 1.5, **training},
+                     "validation_scenarios": 2, "stall_time": 1.5, "resample_scenarios_every": 0, **training},
     })
 
 
@@ -274,6 +274,30 @@ def test_every_algorithm_trains_and_resumes_identically(strategy, tmp_path):
 def test_strategy_can_be_chosen_by_name_and_all_three_are_available():
     from bootstrap import available_strategies
     plugins = available_strategies()
-    assert sorted(plugins) == ["aco_routes", "aco_rules", "genetic"]
+    assert sorted(plugins) == ["aco_routes", "aco_rules", "genetic", "reactive"]
     for plugin in plugins.values():
         assert plugin.label and plugin.short_label and len(plugin.short_label) <= 12
+
+
+def test_by_default_every_generation_trains_on_new_random_maps():
+    defaults = load_config()["training"]
+    assert defaults["resample_scenarios_every"] == 1
+    session = build_training_session(tiny_config(resample_scenarios_every=1))
+    seeds = [session.run_iteration().training_seeds for _ in range(3)]
+    assert len({tuple(s) for s in seeds}) == 3
+    assert not set(sum(seeds, [])) & set(session.scenarios.validation_seeds())
+
+
+def test_algorithms_that_learn_one_route_per_map_keep_their_maps_fixed():
+    session = build_training_session(tiny_config(strategy="aco_routes", resample_scenarios_every=1))
+    first, second = session.run_iteration(), session.run_iteration()
+    assert first.training_seeds == second.training_seeds
+
+
+def test_iteration_statistics_describe_safety_and_path_quality():
+    stats = build_training_session(tiny_config(strategy="aco_rules")).run_iteration()
+    assert stats.iteration_episodes == 12
+    assert 0.0 <= stats.path_efficiency <= 1.0
+    assert stats.min_clearance >= 0.0
+    assert stats.validation_episodes == 2
+    assert 0 <= stats.validation_collisions <= 2

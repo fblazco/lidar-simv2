@@ -17,6 +17,7 @@ from optimization.strategy import Candidate, CandidateResult
 from simulation.environment import Simulation
 from simulation.factory import SimulationFactory
 from simulation.map_data import MapData
+from simulation.navigation import shortest_path_length
 from simulation.vehicle import Status
 
 
@@ -30,6 +31,11 @@ class Scenario:
     def key(self) -> str:
         """Identidad del escenario: la huella del contenido del mapa."""
         return self.map_data.fingerprint()
+
+    @cached_property
+    def reference_length(self) -> float:
+        """Largo del camino más corto del mapa (se calcula una sola vez por escenario)."""
+        return shortest_path_length(self.map_data)
 
 
 ControllerFactory = Callable[[Any, Scenario], Controller]
@@ -48,10 +54,16 @@ class EvaluationSettings:
 class EpisodeRunner:
     """Un episodio: un móvil en un escenario, con registro de métricas."""
 
-    def __init__(self, simulation: Simulation, settings: EvaluationSettings) -> None:
+    def __init__(self, simulation: Simulation, settings: EvaluationSettings,
+                 reference_length: Optional[float] = None) -> None:
         self.simulation = simulation
         self.mobile = simulation.mobiles[0]
         self.settings = settings
+        self.reference_length = (
+            reference_length if reference_length is not None else simulation.world.route.length
+        )
+        self._range = self.mobile.sensor.max_range if self.mobile.sensor is not None else 0.0
+        self._min_clearance = self._closest()
         self.stalled = False
         self._steps = 0
         self._deviation = 0.0
@@ -60,6 +72,10 @@ class EpisodeRunner:
         self._stall_progress = settings.stall_distance / max(simulation.world.route.length, 1e-9)
         self._mark_progress = self.mobile.navigation.progress
         self._mark_time = 0.0
+
+    def _closest(self) -> float:
+        scan = self.mobile.scan
+        return float(scan.min()) * self._range if len(scan) else 0.0
 
     @property
     def done(self) -> bool:
@@ -77,6 +93,7 @@ class EpisodeRunner:
             self._acceleration += abs(action.acceleration - previous.acceleration)
         self._steps += 1
         self._deviation += abs(mobile.navigation.deviation)
+        self._min_clearance = min(self._min_clearance, self._closest())
         if mobile.active:
             progress = mobile.navigation.progress
             if progress >= self._mark_progress + self._stall_progress:
@@ -97,6 +114,8 @@ class EpisodeRunner:
             mean_deviation=self._deviation / max(self._steps, 1),
             steering_change=self._steering / changes,
             acceleration_change=self._acceleration / changes,
+            reference_length=self.reference_length,
+            min_clearance=self._min_clearance,
         )
 
 
@@ -120,7 +139,7 @@ class CandidateEvaluation:
         scenario = self.scenarios[index]
         self.controller = self._controller_factory(self.candidate.solution, scenario)
         simulation = self._simulation_factory.create(scenario.map_data, [self.controller])
-        return EpisodeRunner(simulation, self._settings)
+        return EpisodeRunner(simulation, self._settings, scenario.reference_length)
 
     @property
     def simulation(self) -> Simulation:

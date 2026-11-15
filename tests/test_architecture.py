@@ -52,7 +52,7 @@ PLUGIN_MODULES = tuple(f"optimization.{name}" for name in PLUGINS)
 
 
 def test_the_three_algorithms_are_plugins():
-    assert PLUGINS == ["aco_routes", "aco_rules", "genetic"]
+    assert PLUGINS == ["aco_routes", "aco_rules", "genetic", "reactive"]
 
 
 def test_generic_optimization_code_never_depends_on_a_concrete_algorithm():
@@ -91,7 +91,7 @@ def test_simulation_only_knows_the_controller_contract():
     assert bad == []
 
 
-@pytest.mark.parametrize("removed", [["genetic"], ["aco_rules"], ["aco_routes"], PLUGINS])
+@pytest.mark.parametrize("removed", [["genetic"], ["aco_rules"], ["aco_routes"], ["reactive"], PLUGINS])
 def test_project_works_after_deleting_algorithm_packages(tmp_path, removed):
     """Borrar uno o todos los algoritmos no rompe simulador, editor, sensores ni la aplicación."""
     copy = tmp_path / "proyecto"

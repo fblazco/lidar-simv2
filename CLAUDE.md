@@ -7,9 +7,20 @@ detallada vive en `docs/`; este archivo solo dice qué leer y qué reglas respet
 
 Simulador 2D (Python, Pygame, NumPy) de un vehículo autónomo con un LiDAR de 72
 rayos que aprende a navegar mediante algoritmos evolutivos. Incluye un editor
-visual de mapas en ASCII. El algoritmo lo elige el usuario entre tres plugins:
-algoritmo genético (`genetic`), colonia de hormigas de reglas (`aco_rules`) y
-colonia de hormigas de rutas (`aco_routes`). PSO y ABC podrán sumarse igual.
+visual de mapas en ASCII. El usuario elige dos cosas por separado, ambas plugins:
+la **navegación** (`genetic`, `aco_rules`, `aco_routes` o la referencia sin
+aprendizaje `reactive`) y la **evasión de obstáculos** (`learned`, `ftg`, `apf`).
+PSO, ABC, DWA o VFH podrán sumarse igual.
+
+## Rumbo del proyecto (2026-11-14)
+
+La aplicación será **educativa y estadística**: sirve para comparar algoritmos
+de **búsqueda del camino más corto** (genético, colonias de hormigas…) y de
+**evasión de obstáculos** (aprendida, FTG, APF…). Se entrena con mapas aleatorios
+distintos en cada generación, para que lo aprendido sirva en cualquier mapa.
+La parte educativa (explicaciones, visualizaciones didácticas) **todavía no se
+trabaja**: el usuario pidió dejarla registrada y enfocarse primero en que los
+algoritmos y la comparación estadística funcionen.
 
 ## Objetivos
 
@@ -25,6 +36,9 @@ colonia de hormigas de rutas (`aco_routes`). PSO y ABC podrán sumarse igual.
   aprendizaje y debe funcionar sin ellos (p. ej. con control manual).
 - **Tres conceptos separados:** simulador (mundo físico), móvil (entidad con
   sensor y controlador inyectados) y estrategia de aprendizaje (optimizador).
+- **Navegación ≠ evasión.** La evasión es una capa (`control/avoidance/`) que
+  corrige lo que propone cualquier controlador; no se mete dentro de los
+  algoritmos de navegación.
 - **Controller ≠ LearningStrategy.** El controlador convierte observaciones en
   acciones; la estrategia genera y optimiza soluciones. Se conectan con una
   `controller_factory`, nunca importándose entre sí.
@@ -55,11 +69,13 @@ bootstrap.py       ensamblado: construye todo a partir de la configuración
 config/            default.json y cargador
 simulation/        mundo, vehículo, obstáculos, colisiones, navegación
 sensors/           LiDAR
-control/           contrato Controller y controladores: manual, política MLP, tabla de reglas, seguidor de rutas
+control/           contrato Controller y controladores: manual, política MLP, tabla de reglas, seguidor de rutas, referencia
+control/avoidance/ capa de evasión de obstáculos (plugins): aprendida, FTG, APF
 optimization/      contrato LearningStrategy, fitness, evaluación, sesión, checkpoints, corridas y comparación
 optimization/genetic/      plugin: algoritmo genético
 optimization/aco_rules/    plugin: colonia de hormigas de reglas de conducción
 optimization/aco_routes/   plugin: colonia de hormigas de rutas por mapa
+optimization/reactive/     plugin de referencia: navegación sin aprendizaje
 editor/            modelo del editor, guardado/carga, generador aleatorio
 rendering/         dibujo ASCII en Pygame
 ui/                ventana, vistas, panel de entrenamiento y resultados

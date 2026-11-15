@@ -5,6 +5,7 @@ tiene implementaciones separadas para cada uno.
 """
 from __future__ import annotations
 
+import heapq
 import math
 from dataclasses import dataclass
 from typing import Optional, Tuple
@@ -121,3 +122,69 @@ class Navigator:
             deviation=deviation,
             path_heading=path_heading,
         )
+
+
+# --- camino más corto de un mapa -----------------------------------------------------------
+
+_NEIGHBORS = ((1, 0, 1.0), (-1, 0, 1.0), (0, 1, 1.0), (0, -1, 1.0),
+              (1, 1, math.sqrt(2.0)), (1, -1, math.sqrt(2.0)), (-1, 1, math.sqrt(2.0)), (-1, -1, math.sqrt(2.0)))
+
+
+def _grid_path(map_data, blocked: set):
+    """Camino de menor costo sobre la grilla (8 vecinos, sin cortar esquinas), o None si no existe."""
+    start, goal = map_data.start, map_data.goal
+    best, previous, queue = {start: 0.0}, {}, [(0.0, start)]
+    while queue:
+        cost, cell = heapq.heappop(queue)
+        if cell == goal:
+            path = [cell]
+            while path[-1] in previous:
+                path.append(previous[path[-1]])
+            return path[::-1]
+        if cost > best[cell]:
+            continue
+        for dc, dr, step in _NEIGHBORS:
+            nxt = (cell[0] + dc, cell[1] + dr)
+            if nxt in blocked or not map_data.in_bounds(nxt):
+                continue
+            if dc and dr and ((cell[0] + dc, cell[1]) in blocked or (cell[0], cell[1] + dr) in blocked):
+                continue
+            if cost + step < best.get(nxt, math.inf):
+                best[nxt], previous[nxt] = cost + step, cell
+                heapq.heappush(queue, (cost + step, nxt))
+    return None
+
+
+def _clear_segment(a, b, map_data, blocked: set) -> bool:
+    """La recta entre dos puntos no atraviesa ninguna celda con obstáculo fijo."""
+    samples = max(2, int(math.hypot(b[0] - a[0], b[1] - a[1]) / (0.2 * map_data.cell_size)))
+    return all(
+        map_data.cell_at(a[0] + (b[0] - a[0]) * i / samples, a[1] + (b[1] - a[1]) * i / samples) not in blocked
+        for i in range(samples + 1)
+    )
+
+
+def shortest_path_length(map_data) -> float:
+    """Largo del camino más corto de inicio a destino, en unidades del mundo.
+
+    En seguimiento de ruta es el largo del camino dibujado. En navegación libre
+    es el camino más corto entre los obstáculos fijos, sin holgura para el
+    cuerpo del vehículo: una cota optimista con la que medir lo recorrido.
+    """
+    cells = map_data.path_cells()
+    if map_data.navigation_mode == ROUTE_FOLLOWING and len(cells) > 2:
+        return Route([map_data.cell_center(c) for c in cells]).length
+    (sx, sy), (gx, gy) = map_data.cell_center(map_data.start), map_data.cell_center(map_data.goal)
+    blocked = set(map_data.static_obstacles)
+    path = _grid_path(map_data, blocked)
+    if path is None:
+        return math.hypot(gx - sx, gy - sy)
+    points = [map_data.cell_center(c) for c in path]
+    length, i = 0.0, 0
+    while i < len(points) - 1:        # se tensa el camino de celdas: de cada punto al más lejano que se ve
+        j = len(points) - 1
+        while j > i + 1 and not _clear_segment(points[i], points[j], map_data, blocked):
+            j -= 1
+        length += math.hypot(points[j][0] - points[i][0], points[j][1] - points[i][1])
+        i = j
+    return length

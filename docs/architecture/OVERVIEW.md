@@ -13,18 +13,21 @@ optimization             -> simulation, control
 optimization/genetic     -> optimization (contratos), control
 optimization/aco_rules   -> optimization (contratos), control
 optimization/aco_routes  -> optimization (contratos), control
+optimization/reactive    -> optimization (contratos), control
 rendering                -> simulation, control.controller, pygame
 bootstrap.py             -> config, simulation, sensors, editor, optimization
 ui                       -> bootstrap, config, rendering, editor, control, optimization, simulation, pygame
 main.py                  -> bootstrap, config, optimization, ui
 ```
 
-Nadie importa un algoritmo por nombre: los tres se descubren como plugins, y
+Nadie importa un algoritmo por nombre: los de navegación (`optimization/<nombre>/`)
+y los de evasión (`control/avoidance/<nombre>.py`) se descubren como plugins, y
 ningún plugin importa a otro.
 
 | Paquete | Responsabilidad | No puede importar |
 |---|---|---|
-| `control/` | Contrato `Controller`/`Action`/`Observation`, control manual, `ObservationBuilder`, política MLP, tabla de reglas, seguidor de rutas | simulation, sensors, editor, optimization, pygame |
+| `control/` | Contrato `Controller`/`Action`/`Observation`, control manual, `ObservationBuilder`, política MLP, tabla de reglas, seguidor de rutas, navegación de referencia | simulation, sensors, editor, optimization, pygame |
+| `control/avoidance/` | Capa de evasión de obstáculos: contrato `ObstacleAvoider`, FTG, APF y el registro que los descubre | simulation, sensors, editor, optimization, pygame |
 | `sensors/` | LiDAR por raycasting sobre arreglos NumPy | cualquier otro paquete del proyecto |
 | `simulation/` | Mundo, móvil, obstáculos, colisiones, navegación, paso de tiempo | optimization, sensors, editor, pygame; de `control` solo `control.controller` |
 | `editor/` | Modelo del editor, guardado/carga JSON, generador aleatorio | optimization, rendering, ui, pygame |
@@ -32,6 +35,7 @@ ningún plugin importa a otro.
 | `optimization/genetic/` | Plugin: algoritmo genético sobre los pesos de una red | simulation, sensors, editor, pygame, otros plugins |
 | `optimization/aco_rules/` | Plugin: colonia de hormigas que asigna maniobras a situaciones | ídem |
 | `optimization/aco_routes/` | Plugin: colonia de hormigas que traza una ruta por mapa | ídem |
+| `optimization/reactive/` | Plugin de referencia: navegación sin aprendizaje | ídem |
 | `rendering/` | Dibujo ASCII en Pygame; solo lee el estado | optimization |
 | `ui/` | Ventana, vistas, panel de entrenamiento, resultados | cualquier plugin |
 | `bootstrap.py` | Único punto de ensamblado: construye objetos desde la configuración | cualquier plugin, pygame |
@@ -75,17 +79,51 @@ Un entrenamiento termina al llegar a `training.max_iterations` o cuando el
 usuario lo finaliza. `bootstrap.finish_run` guarda entonces su registro
 (`optimization/results.py`), que es lo que se resume y se compara.
 
-## Los tres algoritmos
+## Dos elecciones independientes: navegación y evasión
+
+Un controlador de entrenamiento se arma con dos piezas que el usuario elige por
+separado:
+
+```
+Observación ─► navegación (decide a dónde ir) ─► propuesta ─► evasión (corrige para no chocar) ─► Acción
+```
+
+**Navegación** (`training.strategy`): plugins de `optimization/`.
 
 | Plugin | Qué es una solución | Controlador | ¿Generaliza? |
 |---|---|---|---|
 | `genetic` | Vector de pesos de una red MLP | `PolicyController` | Sí: se valida en mapas no vistos |
 | `aco_rules` | Tabla "situación → maniobra" (`RuleTable`) | `RuleTableController` | Sí |
 | `aco_routes` | Una ruta de celdas por mapa | `RouteController` | No: una ruta solo sirve en su mapa |
+| `reactive` | Nada: no aprende | `GoalSeekingController` | Sí (referencia) |
 
-Los dos primeros no usan el escenario para construir su controlador; el tercero
-sí, y por eso existen los puntos de extensión de ADR-0005. Las dos colonias
-están descritas en ADR-0006.
+**Evasión** (`training.avoidance`): plugins de `control/avoidance/`.
+
+| Plugin | Qué hace |
+|---|---|
+| `learned` | Ninguna capa: la navegación se ocupa de los obstáculos con lo que percibe |
+| `ftg` | Follow the Gap: encara el hueco más ancho que ve el LiDAR |
+| `apf` | Campos potenciales: el destino atrae, los obstáculos repelen |
+
+`bootstrap` compone ambas: si la evasión elegida aporta un `ObstacleAvoider`,
+envuelve la fábrica de controladores de la navegación con `with_avoidance`. El
+evasor interpreta la dirección propuesta como "hacia dónde quiere ir" la
+navegación y devuelve la orden final. Así cualquier navegación se combina con
+cualquier evasión, y la referencia sin aprendizaje permite medir FTG y APF por
+sí solos. Ver ADR-0007.
+
+## Mapas de entrenamiento y camino más corto
+
+- Los mapas aleatorios son de navegación libre por defecto (sin camino
+  dibujado), con obstáculos repartidos en torno a la recta inicio-destino.
+- Con `resample_scenarios_every = 1` cada generación se evalúa en mapas nuevos:
+  lo aprendido no puede memorizar un mapa. Las estrategias que no generalizan
+  (`aco_routes`) conservan mapas fijos.
+- El conjunto de validación es fijo y nunca interviene en la selección: es la
+  vara común para comparar corridas.
+- `Scenario.reference_length` es el largo del camino más corto del mapa; la
+  eficiencia de un episodio es ese largo dividido por lo recorrido, y forma
+  parte del fitness. Ver ADR-0008.
 
 ## Datos y persistencia
 
@@ -106,7 +144,7 @@ están descritas en ADR-0006.
 - Las posiciones de los obstáculos dinámicos son funciones cerradas del tiempo,
   así que la simulación es determinista y repetible.
 
-## Cómo agregar un algoritmo (PSO, ABC…)
+## Cómo agregar un algoritmo de navegación (PSO, ABC…)
 
 1. Crear `optimization/<nombre>/` con una clase que implemente `LearningStrategy`
    (`iteration`, `ask`, `tell`, `best`, `statistics`, `get_state`, `set_state`).
@@ -119,7 +157,16 @@ están descritas en ADR-0006.
      `generalizes = False` y, si hace falta, `prepare(escenarios)`.
 3. Agregar su sección de parámetros en `config/default.json`.
 
-No hay que tocar `simulation/`, `sensors/`, `editor/`, `ui/` ni `main.py`: el
-registro lo descubre y aparece solo en el selector de la ventana y en
-`--strategy`. `tests/test_architecture.py` comprueba que el proyecto siga
-funcionando al borrar cualquier plugin.
+## Cómo agregar un algoritmo de evasión (DWA, VFH…)
+
+1. Crear `control/avoidance/<nombre>.py` con una clase que implemente
+   `ObstacleAvoider.adjust(observación, propuesta) -> Action`.
+2. En el mismo archivo, exponer `PLUGIN = AvoidancePlugin(name, label,
+   short_label, description, build)`, donde `build(config)` crea el evasor.
+3. Agregar sus parámetros en la sección `avoidance` de `config/default.json`.
+
+En ambos casos no hay que tocar `simulation/`, `sensors/`, `editor/`, `ui/` ni
+`main.py`: el registro los descubre y aparecen solos en los selectores de la
+ventana y en `--strategy` / `--avoidance`. `tests/test_architecture.py`
+comprueba que el proyecto siga funcionando al borrar cualquier plugin de
+navegación.

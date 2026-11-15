@@ -17,6 +17,13 @@ La aplicación (Python, Pygame, NumPy) debe permitir:
 5. Visualizar distintos individuos de una población simultáneamente.
 6. Observar cómo evoluciona el desempeño entre generaciones.
 
+## Rumbo (2026-11-15)
+
+La aplicación será **educativa y estadística**: una herramienta para comparar
+algoritmos de búsqueda del camino más corto y de evasión de obstáculos, sobre
+mapas aleatorios. La parte educativa queda para una etapa posterior. Detalle en
+[EVOLUTION.md](EVOLUTION.md).
+
 ## Prioridad: modularidad
 
 El simulador debe ser completamente independiente del algoritmo de aprendizaje.

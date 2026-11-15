@@ -8,11 +8,11 @@ from typing import List, Optional, Tuple
 
 import pygame
 
-from bootstrap import (available_strategies, build_map_generator, build_simulation_factory,
+from bootstrap import (available_avoidance, available_strategies, build_map_generator, build_simulation_factory,
                        build_training_session, finish_run, load_training_session, save_training_session)
 from config import deep_merge
 from control.manual_controller import ManualController
-from optimization.evaluation import EpisodeRunner, EvaluationSettings
+from optimization.evaluation import EpisodeRunner, EvaluationSettings, Scenario
 from optimization.fitness import FitnessFunction, FitnessWeights
 from optimization.results import RunRecord
 from optimization.strategy import UnknownScenarioError
@@ -30,6 +30,7 @@ BACKGROUND_BUDGET = 0.010          # segundos por cuadro para evaluar candidatos
 LIMIT_STEP = 5                     # generaciones que suma o resta cada pulsación del límite
 HEADER = 18
 SUB_MODES = [("manual", "M Manual"), ("training", "T Entrenar"), ("results", "C Resultados")]
+MAP_MODE_LABELS = {"free": "libres", "route": "con ruta", "mixed": "mixtos"}
 
 
 def keyboard_input():
@@ -50,7 +51,6 @@ class SimulationView:
         self.logs_dir = Path(base_dir) / "logs"
         self.runs_dir = self.logs_dir / "runs"
         self.factory = build_simulation_factory(config)
-        self.generator = build_map_generator(config)
         self.fitness = FitnessFunction(FitnessWeights.from_dict(config["fitness"]))
         self.plugins = available_strategies()
         self.strategy_names = sorted(self.plugins)
@@ -58,8 +58,13 @@ class SimulationView:
         self.selected_strategy: Optional[str] = (
             configured if configured in self.plugins else (self.strategy_names[0] if self.strategy_names else None)
         )
+        self.avoiders = available_avoidance()
+        self.avoidance_names = list(self.avoiders)
+        self.selected_avoidance = config["training"].get("avoidance", self.avoidance_names[0])
+        self.map_modes = list(MAP_MODE_LABELS)
+        self.selected_map_mode = config["generator"]["navigation_mode"]
         self.iteration_limit = int(config["training"].get("max_iterations", 0))   # 0 = sin límite
-        self.results = ResultsView(fonts, self.runs_dir, self.plugins)
+        self.results = ResultsView(fonts, self.runs_dir, self.plugins, self.avoiders)
         self.sub_mode = "manual"
         self.pilot = "manual"
         self.manual = ManualController()
@@ -100,7 +105,9 @@ class SimulationView:
         editor_map = self.editor_view.editor.map
         if random_map or editor_map.validate():
             seed = int(time.time() * 1000) % 1_000_000
-            map_data = self.generator.generate(seed)
+            generator = build_map_generator(deep_merge(
+                self.config, {"generator": {"navigation_mode": self.selected_map_mode}}))
+            map_data = generator.generate(seed)
             self.message = f"Mapa aleatorio (semilla {seed})."
             if not random_map:
                 self.message += " El mapa del editor está incompleto."
@@ -122,7 +129,8 @@ class SimulationView:
                 self.pilot, controller = "manual", self.manual
         self.simulation = self.factory.create(map_data, [controller])
         # El episodio manual nunca se corta por falta de avance: el conductor decide.
-        self.episode = EpisodeRunner(self.simulation, EvaluationSettings(stall_time=math.inf))
+        self.episode = EpisodeRunner(self.simulation, EvaluationSettings(stall_time=math.inf),
+                                     Scenario(map_data).reference_length)
         self.episode_summary = None
         self._accumulator = 0.0
 
@@ -183,6 +191,24 @@ class SimulationView:
             index = self.strategy_names.index(self.selected_strategy) + delta
             self.select_strategy(self.strategy_names[index % len(self.strategy_names)])
 
+    def select_avoidance(self, name: str) -> None:
+        if name in self.avoiders:
+            self.selected_avoidance = name
+            self.message = self.avoiders[name].description
+
+    def cycle_avoidance(self, delta: int) -> None:
+        index = self.avoidance_names.index(self.selected_avoidance) + delta
+        self.select_avoidance(self.avoidance_names[index % len(self.avoidance_names)])
+
+    def select_map_mode(self, mode: str) -> None:
+        if mode in MAP_MODE_LABELS:
+            self.selected_map_mode = mode
+            self.message = f"Mapas aleatorios {MAP_MODE_LABELS[mode]}."
+
+    def cycle_map_mode(self, delta: int) -> None:
+        index = self.map_modes.index(self.selected_map_mode) + delta
+        self.select_map_mode(self.map_modes[index % len(self.map_modes)])
+
     def set_iteration_limit(self, limit: int) -> None:
         self.iteration_limit = max(0, int(limit))
         if self.session is not None:
@@ -215,15 +241,19 @@ class SimulationView:
                 self.message = "El mapa del editor está incompleto: se entrena solo con mapas aleatorios."
             else:
                 fixed = [editor_map.copy()]
-        config = deep_merge(self.config, {"training": {"strategy": self.selected_strategy,
-                                                       "max_iterations": self.iteration_limit}})
+        config = deep_merge(self.config, {
+            "training": {"strategy": self.selected_strategy, "avoidance": self.selected_avoidance,
+                         "max_iterations": self.iteration_limit},
+            "generator": {"navigation_mode": self.selected_map_mode},
+        })
         try:
             session = build_training_session(config, fixed)
         except ValueError as error:
             self.message = str(error)
             return
         self._adopt_session(session, config)
-        self.message = f"Entrenamiento nuevo con {self.plugins[self.selected_strategy].short_label}."
+        self.message = (f"Entrenamiento nuevo: {self.plugins[self.selected_strategy].short_label}, "
+                        f"evasión {self.avoiders[self.selected_avoidance].short_label}.")
 
     def start_training(self) -> None:
         if self.session is None:
@@ -289,6 +319,8 @@ class SimulationView:
             return
         self._adopt_session(session, config)
         self.selected_strategy = session.strategy.name
+        self.selected_avoidance = session.avoidance
+        self.selected_map_mode = config["generator"]["navigation_mode"]
         self.iteration_limit = session.max_iterations
         self.message = f"Checkpoint cargado: {Path(path).name} (generación {session.strategy.iteration})."
 
@@ -416,8 +448,12 @@ class SimulationView:
             panel.text("No hay algoritmos de aprendizaje instalados (carpetas en optimization/).", WARN)
             return
         chosen = self.plugins[self.selected_strategy]
-        panel.stepper("Algoritmo", chosen.short_label, lambda: self.cycle_strategy(-1),
+        panel.stepper("Navegación", chosen.short_label, lambda: self.cycle_strategy(-1),
                       lambda: self.cycle_strategy(1), "<", ">")
+        panel.stepper("Evasión", self.avoiders[self.selected_avoidance].short_label,
+                      lambda: self.cycle_avoidance(-1), lambda: self.cycle_avoidance(1), "<", ">")
+        panel.stepper("Mapas", MAP_MODE_LABELS[self.selected_map_mode],
+                      lambda: self.cycle_map_mode(-1), lambda: self.cycle_map_mode(1), "<", ">")
         panel.buttons([("Pausar" if self.running else "Iniciar", self.toggle_training, self.running),
                        ("Nuevo", self.new_training),
                        ("F Finalizar", self.finish_training, False, session is not None and bool(session.history))])
@@ -435,6 +471,7 @@ class SimulationView:
             training = self.config["training"]
             panel.text(chosen.label, ACCENT, 12)
             panel.text(chosen.description, TEXT, 12)
+            panel.text("Evasión: " + self.avoiders[self.selected_avoidance].description, TEXT, 12)
             panel.gap(4)
             panel.text(f"Población: {training['population_size']} individuos, "
                        f"{training['visible_agents']} visibles, "
@@ -442,9 +479,11 @@ class SimulationView:
             panel.text("Espacio o Iniciar para comenzar.", MUTED)
             draw_text(surface, self.fonts, "Entrenamiento detenido", self.canvas.center, 16, MUTED, "center")
             return
-        if session.strategy.name != self.selected_strategy:
-            panel.text(f"Pulsa Nuevo para entrenar con {chosen.short_label}.", WARN, 12)
-        draw_training_stats(panel, session, self.plugins.get(session.strategy.name))
+        current = (session.strategy.name, session.avoidance, self.session_config["generator"]["navigation_mode"])
+        if current != (self.selected_strategy, self.selected_avoidance, self.selected_map_mode):
+            panel.text("Pulsa Nuevo para aplicar la selección.", WARN, 12)
+        draw_training_stats(panel, session, self.plugins.get(session.strategy.name),
+                            self.avoiders.get(session.avoidance))
         self._draw_agents(surface, session)
 
     def _draw_agents(self, surface, session: TrainingSession) -> None:
@@ -454,6 +493,7 @@ class SimulationView:
             text = "Pulsa Iniciar" if not session.history and not self.running else "Evaluación sin renderizado"
             draw_text(surface, self.fonts, text, self.canvas.center, 14, MUTED, "center")
             return
+        runs = [run for run in runs if run is not None] or runs    # sin huecos: una referencia evalúa un solo controlador
         columns = math.ceil(math.sqrt(len(runs)))
         rows = math.ceil(len(runs) / columns)
         width, height = self.canvas.width // columns, self.canvas.height // rows

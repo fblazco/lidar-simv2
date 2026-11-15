@@ -89,6 +89,14 @@ class IterationStats:
     training_seeds: List[int] = field(default_factory=list)
     strategy: Dict[str, float] = field(default_factory=dict)   # estadísticas propias del algoritmo
     seconds: float = 0.0              # tiempo de cómputo dedicado a la iteración
+    iteration_episodes: int = 0       # episodios simulados en esta iteración
+    stalls: int = 0                   # episodios cortados por no avanzar
+    path_efficiency: float = 0.0      # camino más corto / recorrido, media de los episodios que llegaron
+    min_clearance: float = 0.0        # distancia mínima a un obstáculo, media por episodio
+    validation_episodes: int = 0
+    validation_collisions: int = 0
+    validation_efficiency: Optional[float] = None   # eficiencia media de las llegadas en validación
+    validation_time: Optional[float] = None         # tiempo medio hasta el destino en validación (s)
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -100,13 +108,15 @@ class IterationStats:
 
 class TrainingSession:
     def __init__(self, strategy: LearningStrategy, evaluator: Evaluator, scenarios: ScenarioProvider,
-                 visible_agents: int = 0, validate_every: int = 1, max_iterations: int = 0) -> None:
+                 visible_agents: int = 0, validate_every: int = 1, max_iterations: int = 0,
+                 avoidance: str = "learned") -> None:
         self.strategy = strategy
         self.evaluator = evaluator
         self.scenarios = scenarios
         self.visible_agents = max(0, int(visible_agents))
         self.validate_every = int(validate_every)
         self.max_iterations = int(max_iterations)   # 0 = sin límite
+        self.avoidance = avoidance                  # algoritmo de evasión con que se arman los controladores
         self._seconds = 0.0
         self._started_at = 0.0
         self.history: List[IterationStats] = []
@@ -271,6 +281,9 @@ class TrainingSession:
         self.evaluations += len(results)
         self.episodes += len(episodes)
         count = max(len(episodes), 1)
+        arrived = [e for e in episodes if e.reached_goal]
+        checked = validation.episodes if validation else []
+        checked_ok = [e for e in checked if e.reached_goal]
         stats = IterationStats(
             iteration=self.strategy.iteration,
             evaluations=self.evaluations,
@@ -290,6 +303,15 @@ class TrainingSession:
             training_seeds=list(self._training_seeds),
             strategy={k: float(v) for k, v in self.strategy.statistics().items()},
             seconds=self._seconds + (time.perf_counter() - self._started_at),
+            iteration_episodes=len(episodes),
+            stalls=sum(e.stalled for e in episodes),
+            path_efficiency=sum(e.path_efficiency for e in arrived) / len(arrived) if arrived else 0.0,
+            min_clearance=sum(e.min_clearance for e in episodes) / count,
+            validation_episodes=len(checked),
+            validation_collisions=sum(e.collided for e in checked),
+            validation_efficiency=(sum(e.path_efficiency for e in checked_ok) / len(checked_ok)
+                                   if checked_ok else None),
+            validation_time=sum(e.time for e in checked_ok) / len(checked_ok) if checked_ok else None,
         )
         self._seconds = 0.0
         self.history.append(stats)

@@ -30,14 +30,14 @@ def test_generated_maps_are_valid_and_simulable():
 
 def test_route_is_an_ordered_contiguous_path_from_start_to_goal():
     for seed in SEEDS:
-        m = generate(seed)
+        m = generate(seed, navigation_mode="route")
         assert m.route[0] == m.start and m.route[-1] == m.goal
         for a, b in zip(m.route, m.route[1:]):
             assert max(abs(a[0] - b[0]), abs(a[1] - b[1])) == 1
 
 
 def test_maps_vary_in_routes_goals_and_obstacles():
-    maps = [generate(seed) for seed in SEEDS]
+    maps = [generate(seed, navigation_mode="route") for seed in SEEDS]
     assert len({tuple(m.route) for m in maps}) > 30
     assert len({m.goal for m in maps}) > 10
     assert all(m.static_obstacles for m in maps)
@@ -77,3 +77,40 @@ def test_grid_size_follows_the_configuration():
     m = generate(9, cols=24, rows=14)
     assert (m.cols, m.rows) == (24, 14)
     assert m.validate() == []
+
+
+# --- navegación libre: el modo por defecto de los mapas aleatorios ---------------------------
+
+def distance_to_segment(cell, a, b):
+    (px, py), (ax, ay), (bx, by) = cell, a, b
+    dx, dy = bx - ax, by - ay
+    t = max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)))
+    return math.hypot(px - ax - t * dx, py - ay - t * dy)
+
+
+def test_random_maps_are_free_navigation_by_default_with_no_drawn_route():
+    for seed in SEEDS:
+        m = generate(seed)
+        assert m.navigation_mode == "free" and m.route == []
+        assert m.validate() == []
+        gx, gy = m.goal[0] - m.start[0], m.goal[1] - m.start[1]
+        assert abs(math.atan2(gy, gx) - m.start_heading) < 1e-9        # arranca mirando al destino
+
+
+def test_free_maps_put_obstacles_between_start_and_goal():
+    """Para que encontrar el camino más corto exija esquivar algo."""
+    blocked = 0
+    for seed in SEEDS:
+        m = generate(seed)
+        on_the_way = [c for c in m.static_obstacles if distance_to_segment(c, m.start, m.goal) < 0.75]
+        blocked += bool(on_the_way)
+        assert all(distance_to_segment(c, m.start, m.goal) < 6.0 for c in m.static_obstacles)
+    assert blocked > 30
+
+
+def test_free_maps_vary_and_keep_all_three_kinds_of_moving_obstacle():
+    maps = [generate(seed) for seed in SEEDS]
+    assert len({(m.start, m.goal) for m in maps}) > 30
+    assert {d.kind for m in maps for d in m.dynamic_obstacles} == {"horizontal", "vertical", "circular"}
+    assert any(max(abs(a[0] - b[0]), abs(a[1] - b[1])) == 1                 # algunos obstáculos forman paredes
+               for m in maps for a in m.static_obstacles for b in m.static_obstacles if a != b)

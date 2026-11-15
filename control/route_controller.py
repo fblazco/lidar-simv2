@@ -12,6 +12,7 @@ from typing import Sequence
 import numpy as np
 
 from control.controller import Action, Controller, Observation
+from control.rays import relative_ray_angles
 
 STEERING_GAIN = 2.0          # dirección a fondo con ~30° de error de rumbo
 SPEED_GAIN = 1.5
@@ -34,12 +35,7 @@ class RouteController(Controller):
         self.lookahead = lookahead                # adelanto del punto perseguido sobre la ruta
         self.safety_margin = safety_margin        # distancia mínima a un obstáculo en el corredor
         self.reaction_time = reaction_time        # margen extra proporcional a la velocidad
-        if fov_deg >= 360.0:
-            angles = np.arange(num_rays) * (2.0 * math.pi / num_rays)
-        else:
-            half = math.radians(fov_deg) / 2.0
-            angles = np.linspace(-half, half, num_rays)
-        angles = (angles + math.pi) % (2.0 * math.pi) - math.pi
+        angles = relative_ray_angles(num_rays, fov_deg)
         self._front = np.flatnonzero(np.abs(angles) <= math.radians(FRONT_CONE_DEG))
         self._front_angles = angles[self._front]
         self._segment = 0
