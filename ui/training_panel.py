@@ -1,65 +1,62 @@
-"""Panel de estadísticas del entrenamiento y gráfico de evolución del fitness."""
+"""Estadísticas del entrenamiento y gráficos de líneas."""
 from __future__ import annotations
 
-from typing import List
+from typing import List, Optional, Sequence, Tuple
 
 import pygame
 
 from optimization.training import IterationStats, TrainingSession
 from ui.widgets import ACCENT, BACKGROUND, BORDER, GOOD, MUTED, TEXT, Fonts, Panel, draw_text
 
-STRATEGY_LABELS = {
-    "mutation_rate": "Tasa de mutación",
-    "mutation_sigma": "Sigma de mutación",
-    "crossover_rate": "Tasa de crossover",
-    "elitism": "Elitismo",
-    "diversity": "Diversidad genética",
-}
+Series = Tuple[str, tuple, Sequence[float]]   # (leyenda, color, valores por generación)
+
+
+def draw_line_chart(surface, fonts: Fonts, rect: pygame.Rect, series: Sequence[Series], title: str = "",
+                    percent: bool = False) -> None:
+    """Una línea por serie, todas con la misma escala. El eje X es la generación."""
+    pygame.draw.rect(surface, BACKGROUND, rect)
+    pygame.draw.rect(surface, BORDER, rect, 1)
+    x = rect.x + 6
+    if title:
+        x = draw_text(surface, fonts, title, (x, rect.y + 4), 11, TEXT).right + 10
+    for label, color, _ in series:
+        x = draw_text(surface, fonts, label, (x, rect.y + 4), 11, color).right + 8
+    values = [v for _, _, data in series for v in data]
+    if not values:
+        draw_text(surface, fonts, "sin generaciones aún", rect.center, 12, MUTED, "center")
+        return
+    low, high = min(values), max(values)
+    span = (high - low) or 1.0
+    plot = pygame.Rect(rect.x + 8, rect.y + 24, rect.width - 16, rect.height - 46)   # entre la leyenda y el pie
+    steps = max(max(len(data) for _, _, data in series) - 1, 1)
+    for _, color, data in series:
+        points = [(plot.x + plot.width * i / steps, plot.bottom - plot.height * (v - low) / span)
+                  for i, v in enumerate(data)]
+        if len(points) == 1:
+            pygame.draw.circle(surface, color, (int(points[0][0]), int(points[0][1])), 3)
+        elif points:
+            pygame.draw.lines(surface, color, False, points, 2)
+    scale = (lambda v: f"{v * 100:.0f} %") if percent else (lambda v: f"{v:.0f}")
+    draw_text(surface, fonts, scale(high), (rect.right - 6, rect.y + 4), 11, MUTED, "topright")
+    draw_text(surface, fonts, scale(low), (rect.right - 6, rect.bottom - 16), 11, MUTED, "topright")
+    draw_text(surface, fonts, f"gen 1-{steps + 1}", (rect.x + 6, rect.bottom - 16), 11, MUTED)
 
 
 def draw_fitness_chart(surface, fonts: Fonts, rect: pygame.Rect, history: List[IterationStats]) -> None:
     """Mejor fitness y fitness promedio por generación."""
-    pygame.draw.rect(surface, BACKGROUND, rect)
-    pygame.draw.rect(surface, BORDER, rect, 1)
-    draw_text(surface, fonts, "mejor", (rect.x + 6, rect.y + 4), 11, GOOD)
-    draw_text(surface, fonts, "promedio", (rect.x + 52, rect.y + 4), 11, ACCENT)
-    if not history:
-        draw_text(surface, fonts, "sin generaciones aún", rect.center, 12, MUTED, "center")
-        return
-    best = [h.best_fitness for h in history]
-    mean = [h.mean_fitness for h in history]
-    low, high = min(min(best), min(mean)), max(max(best), max(mean))
-    span = (high - low) or 1.0
-    plot = rect.inflate(-16, -40)
-    plot.y += 10
-
-    def points(values):
-        steps = max(len(values) - 1, 1)
-        return [(plot.x + plot.width * i / steps, plot.bottom - plot.height * (v - low) / span)
-                for i, v in enumerate(values)]
-
-    for values, color in ((mean, ACCENT), (best, GOOD)):
-        pts = points(values)
-        if len(pts) == 1:
-            pygame.draw.circle(surface, color, (int(pts[0][0]), int(pts[0][1])), 3)
-        else:
-            pygame.draw.lines(surface, color, False, pts, 2)
-    draw_text(surface, fonts, f"{high:.0f}", (rect.right - 6, rect.y + 4), 11, MUTED, "topright")
-    draw_text(surface, fonts, f"{low:.0f}", (rect.right - 6, rect.bottom - 16), 11, MUTED, "topright")
-    draw_text(surface, fonts, f"gen 1-{len(history)}", (rect.x + 6, rect.bottom - 16), 11, MUTED)
+    draw_line_chart(surface, fonts, rect, [("mejor", GOOD, [h.best_fitness for h in history]),
+                                           ("promedio", ACCENT, [h.mean_fitness for h in history])])
 
 
-def draw_training_stats(panel: Panel, session: TrainingSession) -> None:
-    """Estadísticas generales y las propias del algoritmo, más el gráfico."""
+def draw_training_stats(panel: Panel, session: TrainingSession, plugin=None) -> None:
+    """Estadísticas generales, las propias del algoritmo (con las etiquetas de su plugin) y el gráfico."""
     done, total = session.evaluated
-    panel.text(f"Generación actual: {session.current_iteration}")
+    limit = f" de {session.max_iterations}" if session.max_iterations else ""
+    panel.text(f"Generación actual: {session.current_iteration}{limit}")
     panel.text(f"Individuos evaluados: {done} / {total}")
     panel.text(f"Evaluaciones totales: {session.evaluations + done}")
-    for slot, run in enumerate(session.visible):
-        if run is not None:
-            panel.text(f" vista {slot + 1}: individuo {run.candidate.id}  fitness {run.partial_fitness:7.1f}", MUTED, 12)
     panel.gap(4)
-    last = session.history[-1] if session.history else None
+    last: Optional[IterationStats] = session.history[-1] if session.history else None
     if last is None:
         panel.text("Aún no terminó ninguna generación.", MUTED)
     else:
@@ -73,11 +70,14 @@ def draw_training_stats(panel: Panel, session: TrainingSession) -> None:
         if last.validation_fitness is not None:
             panel.text(f"Validación: fitness {last.validation_fitness:.1f}, "
                        f"éxito {last.validation_success_rate * 100:.0f} %", TEXT, 12)
+        elif not session.strategy.generalizes:
+            panel.text("Validación: no aplica (una ruta por mapa)", MUTED, 12)
         if last.strategy:
+            labels = plugin.stat_labels if plugin is not None else {}
             panel.gap(4)
-            panel.text(f"Algoritmo: {session.strategy.name}", ACCENT)
+            panel.text(plugin.short_label if plugin is not None else session.strategy.name, ACCENT)
             for key, value in last.strategy.items():
-                panel.text(f"{STRATEGY_LABELS.get(key, key)}: {value:.3g}", TEXT, 12)
+                panel.text(f"{labels.get(key, key)}: {value:.3g}", TEXT, 12)
     panel.gap(4)
-    height = max(80, min(170, panel.rect.bottom - panel.y - 56))   # deja sitio al mensaje de estado
+    height = max(70, min(170, panel.rect.bottom - panel.y - 56))   # deja sitio al mensaje de estado
     draw_fitness_chart(panel.surface, panel.fonts, panel.reserve(height), session.history)

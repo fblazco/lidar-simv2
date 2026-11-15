@@ -1,13 +1,14 @@
 """Evaluación de candidatos en el simulador, paso a paso.
 
 Es independiente del algoritmo: recibe candidatos con soluciones opacas, una
-``controller_factory`` que las convierte en controladores y un conjunto de
-escenarios. El mismo código sirve para evaluar con o sin renderizado: quien
+``controller_factory(solución, escenario)`` que las convierte en controladores
+y un conjunto de escenarios. El mismo código sirve para evaluar con o sin renderizado: quien
 quiera mostrar un candidato solo lee ``CandidateEvaluation.simulation``.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
+from functools import cached_property
 from typing import Any, Callable, List, Optional, Sequence
 
 from control.controller import Controller
@@ -24,6 +25,14 @@ class Scenario:
     map_data: MapData
     seed: Optional[int] = None   # semilla del generador (None para mapas dibujados a mano)
     label: str = ""
+
+    @cached_property
+    def key(self) -> str:
+        """Identidad del escenario: la huella del contenido del mapa."""
+        return self.map_data.fingerprint()
+
+
+ControllerFactory = Callable[[Any, Scenario], Controller]
 
 
 @dataclass
@@ -94,11 +103,11 @@ class EpisodeRunner:
 class CandidateEvaluation:
     """Evalúa un candidato en todos sus escenarios, un paso de simulación por llamada."""
 
-    def __init__(self, candidate: Candidate, controller: Controller, scenarios: Sequence[Scenario],
-                 simulation_factory: SimulationFactory, fitness: FitnessFunction,
-                 settings: EvaluationSettings) -> None:
+    def __init__(self, candidate: Candidate, controller_factory: ControllerFactory,
+                 scenarios: Sequence[Scenario], simulation_factory: SimulationFactory,
+                 fitness: FitnessFunction, settings: EvaluationSettings) -> None:
         self.candidate = candidate
-        self.controller = controller
+        self._controller_factory = controller_factory
         self.scenarios = list(scenarios)
         self._simulation_factory = simulation_factory
         self._fitness = fitness
@@ -108,7 +117,9 @@ class CandidateEvaluation:
         self.runner = self._start_episode(0)
 
     def _start_episode(self, index: int) -> EpisodeRunner:
-        simulation = self._simulation_factory.create(self.scenarios[index].map_data, [self.controller])
+        scenario = self.scenarios[index]
+        self.controller = self._controller_factory(self.candidate.solution, scenario)
+        simulation = self._simulation_factory.create(scenario.map_data, [self.controller])
         return EpisodeRunner(simulation, self._settings)
 
     @property
@@ -152,11 +163,12 @@ class CandidateEvaluation:
                 self.runner = self._start_episode(len(self.episodes))
 
     def result(self) -> CandidateResult:
-        return CandidateResult(self.candidate, self._fitness.aggregate(self.scores), list(self.episodes))
+        return CandidateResult(self.candidate, self._fitness.aggregate(self.scores), list(self.episodes),
+                               list(self.scores))
 
 
 class Evaluator:
-    def __init__(self, simulation_factory: SimulationFactory, controller_factory: Callable[[Any], Controller],
+    def __init__(self, simulation_factory: SimulationFactory, controller_factory: ControllerFactory,
                  fitness: FitnessFunction, settings: Optional[EvaluationSettings] = None) -> None:
         self.simulation_factory = simulation_factory
         self.controller_factory = controller_factory
@@ -165,8 +177,7 @@ class Evaluator:
 
     def start(self, candidate: Candidate, scenarios: Sequence[Scenario]) -> CandidateEvaluation:
         """Evaluación por pasos (para repartir el trabajo entre cuadros o mostrarla)."""
-        controller = self.controller_factory(candidate.solution)
-        return CandidateEvaluation(candidate, controller, scenarios, self.simulation_factory,
+        return CandidateEvaluation(candidate, self.controller_factory, scenarios, self.simulation_factory,
                                    self.fitness, self.settings)
 
     def evaluate(self, candidates: Sequence[Candidate], scenarios: Sequence[Scenario]) -> List[CandidateResult]:

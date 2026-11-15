@@ -99,6 +99,7 @@ def test_controller_receives_numeric_observation_with_mode_and_targets():
     assert obs.waypoint_bearing == pytest.approx(0.0)
     assert obs.path_deviation == pytest.approx(0.0)
     assert obs.speed == 0.0
+    assert (obs.x, obs.y) == (1.5, 5.5)
 
 
 def test_free_navigation_uses_the_same_simulation_and_reaches_the_goal():

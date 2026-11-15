@@ -192,3 +192,139 @@ def test_best_policy_can_replace_the_manual_pilot(app):
     assert type(view.simulation.mobiles[0].controller).__name__ == "PolicyController"
     view.set_pilot("manual")
     assert type(view.simulation.mobiles[0].controller).__name__ == "ManualController"
+
+
+# --- selección de algoritmo, resultados y comparación ----------------------------------------
+
+def test_training_algorithm_is_chosen_in_the_window(app):
+    app.set_mode("simulation")
+    view = app.simulation_view
+    view.set_sub_mode("training")
+    assert view.strategy_names == ["aco_routes", "aco_rules", "genetic"]
+    assert view.selected_strategy == "genetic"
+    view.cycle_strategy(1)
+    assert view.selected_strategy == "aco_routes"
+    view.cycle_strategy(-1)
+    view.cycle_strategy(-1)
+    assert view.selected_strategy == "aco_rules"          # la lista es circular
+    view.new_training()
+    assert view.session.strategy.name == "aco_rules"
+    view.select_strategy("genetic")
+    assert view.session.strategy.name == "aco_rules"      # cambiar la selección no toca el entrenamiento en curso
+    app.run_frames(3)
+
+
+@pytest.mark.parametrize("strategy", ["genetic", "aco_rules", "aco_routes"])
+def test_every_algorithm_trains_in_the_window(app, strategy):
+    app.set_mode("simulation")
+    view = app.simulation_view
+    view.select_strategy(strategy)
+    slowest = train_one_generation(app)
+    assert view.session.strategy.name == strategy
+    assert slowest < 0.5
+    assert len(view.session.history) == 1
+    app.run_frames(5)
+    assert len(distinct_colors(app.screen)) > 5
+
+
+def test_route_colony_shows_its_pheromone_and_the_route_of_each_ant(app):
+    app.set_mode("simulation")
+    view = app.simulation_view
+    view.select_strategy("aco_routes")
+    view.set_sub_mode("training")
+    view.start_training()
+    app.run_frames(3)
+    run = next(r for r in view.session.visible if r is not None)
+    heat = view.session.strategy.cell_heatmap(run.scenario)
+    assert heat.shape == (run.scenario.map_data.rows, run.scenario.map_data.cols)
+    assert run.simulation.mobiles[0].controller.planned_path.shape[1] == 2
+
+
+def test_finishing_a_run_shows_its_statistics_and_saves_it(app, tmp_path):
+    app.set_mode("simulation")
+    train_one_generation(app)
+    view = app.simulation_view
+    record = view.finish_training()
+    assert view.running is False and view.sub_mode == "results"
+    assert record.strategy == "genetic" and record.metrics()["iterations"] == 1
+    assert (tmp_path / "logs" / "runs" / f"{record.run_id}.json").exists()
+    assert view.results.selected == [record.run_id]
+    assert [r.run_id for r in view.results.records] == [record.run_id]
+    app.run_frames(3)
+    assert len(distinct_colors(app.screen)) > 5
+
+
+def test_finishing_before_any_generation_ends_does_nothing(app):
+    app.set_mode("simulation")
+    view = app.simulation_view
+    view.set_sub_mode("training")
+    view.start_training()
+    app.run_frames(2)
+    assert view.finish_training() is None
+    assert view.sub_mode == "training" and view.results.records == []
+
+
+def test_training_stops_by_itself_at_the_generation_limit(app):
+    app.set_mode("simulation")
+    view = app.simulation_view
+    view.set_iteration_limit(1)
+    train_one_generation(app)
+    app.run_frames(2)
+    assert view.running is False and view.sub_mode == "results"
+    assert len(view.results.records) == 1
+    view.set_sub_mode("training")
+    view.start_training()                    # continuar extiende el límite otro tramo
+    assert view.running and not view.session.finished
+
+
+def test_two_runs_with_different_algorithms_can_be_compared(app):
+    app.set_mode("simulation")
+    view = app.simulation_view
+    train_one_generation(app)
+    first = view.finish_training()
+    view.select_strategy("aco_rules")
+    view.new_training()
+    train_one_generation(app)
+    second = view.finish_training()
+    assert first.run_id != second.run_id
+    assert view.results.selected == [second.run_id, first.run_id]      # A: la recién terminada; B: la anterior
+    rows = view.results.comparison()
+    assert rows[0][0] == "Algoritmo" and rows[0][1] != rows[0][2]
+    assert any(label == "Mejor fitness" for label, *_ in rows)
+    app.run_frames(3)
+    assert len(distinct_colors(app.screen)) > 6
+    view.results.toggle(first.run_id)                                    # quitar B deja el resumen de una sola
+    assert view.results.selected == [second.run_id] and view.results.comparison() == []
+    app.run_frames(2)
+
+
+def test_manual_episode_ends_with_a_summary(app):
+    app.editor_view.editor.set_map(corridor_map())
+    app.set_mode("simulation")
+    view = app.simulation_view
+    view.input_source = lambda: (0.0, 1.0)
+    assert view.episode_summary is None
+    for _ in range(3000):
+        app.run_frames(1)
+        if view.episode_summary is not None:
+            break
+    summary = dict(view.episode_summary)
+    assert summary["Resultado"] == "llegó"
+    assert float(summary["Fitness"]) > 500.0
+    assert {"Tiempo", "Distancia", "Velocidad media", "Desvío medio"} <= set(summary)
+    app.run_frames(2)
+
+
+def test_best_route_pilot_drives_one_of_the_maps_the_colony_trained_on(app):
+    app.editor_view.editor.set_map(corridor_map())
+    app.set_mode("simulation")
+    view = app.simulation_view
+    view.select_strategy("aco_routes")
+    train_one_generation(app)
+    view.set_sub_mode("manual")
+    view.set_pilot("policy")
+    assert type(view.simulation.mobiles[0].controller).__name__ == "RouteController"
+    trained = [m.fingerprint() for m in view.session.training_maps()]
+    assert view.simulation.world.map.fingerprint() in trained
+    assert "entren" in view.message.lower()
+    app.run_frames(10)

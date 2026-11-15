@@ -5,8 +5,11 @@ plugin de optimización elegido. Ningún algoritmo concreto se importa por nombr
 """
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
-from typing import Dict, Sequence, Tuple, Union
+
+from config import deep_merge, load_config
+from typing import Dict, Optional, Sequence, Tuple, Union
 
 from editor.map_generator import GeneratorConfig, MapGenerator
 from editor.map_manager import load_map
@@ -14,6 +17,7 @@ from optimization.checkpoint import load_checkpoint, save_checkpoint
 from optimization.evaluation import EvaluationSettings, Evaluator
 from optimization.fitness import FitnessFunction, FitnessWeights
 from optimization.registry import StrategyPlugin, discover_plugins
+from optimization.results import RunRecord, save_run
 from optimization.training import ScenarioProvider, TrainingSession
 from sensors.lidar import Lidar
 from simulation.environment import SimulationConfig
@@ -65,11 +69,20 @@ def _build_session(config: dict, maps: Sequence[MapData]) -> TrainingSession:
         resample_every=training["resample_scenarios_every"],
     )
     return TrainingSession(bundle.strategy, evaluator, scenarios,
-                           visible_agents=training["visible_agents"], validate_every=training["validate_every"])
+                           visible_agents=training["visible_agents"], validate_every=training["validate_every"],
+                           max_iterations=training.get("max_iterations", 0))
+
+
+def with_strategy(config: dict, strategy: str) -> dict:
+    """Copia de la configuración con otro algoritmo de aprendizaje elegido."""
+    return deep_merge(config, {"training": {"strategy": strategy}})
 
 
 def build_training_session(config: dict, fixed_maps: Sequence[MapData] = ()) -> TrainingSession:
-    """Sesión nueva. ``fixed_maps`` y ``training.map_files`` se suman a los mapas aleatorios."""
+    """Sesión nueva con el algoritmo ``training.strategy``.
+
+    ``fixed_maps`` y ``training.map_files`` se suman a los mapas aleatorios.
+    """
     from_files = [load_map(path) for path in config["training"].get("map_files", [])]
     return _build_session(config, [*from_files, *fixed_maps])
 
@@ -83,8 +96,37 @@ def save_training_session(session: TrainingSession, path: Union[str, Path], conf
 def load_training_session(path: Union[str, Path]) -> Tuple[TrainingSession, dict]:
     """Reconstruye la sesión con la configuración guardada en el checkpoint."""
     meta, arrays = load_checkpoint(path)
-    config = meta["config"]
+    config = deep_merge(load_config(), meta["config"])   # los ajustes nuevos toman su valor por defecto
     maps = [MapData.from_dict(data) for data in meta["scenarios"]["fixed_maps"]]
     session = _build_session(config, maps)
     session.set_state(meta, arrays)
     return session, config
+
+
+def finish_run(session: TrainingSession, config: dict, directory: Union[str, Path],
+               run_id: str) -> Optional[RunRecord]:
+    """Da por finalizada una corrida: guarda su registro (resumen + historial) y lo devuelve.
+
+    Devuelve ``None`` si todavía no terminó ninguna iteración. Se puede llamar
+    más de una vez con el mismo ``run_id`` para actualizar el registro.
+    """
+    if not session.history:
+        return None
+    strategy = session.strategy
+    plugin = discover_plugins().get(strategy.name)
+    scenarios = session.scenarios
+    record = RunRecord(
+        run_id=run_id,
+        strategy=strategy.name,
+        label=plugin.label if plugin is not None else strategy.name,
+        finished_at=datetime.now().isoformat(timespec="seconds"),
+        seed=scenarios.seed,
+        population_size=config["training"]["population_size"],
+        generalizes=bool(strategy.generalizes),
+        training_seeds=list(session.history[-1].training_seeds),
+        validation_seeds=scenarios.validation_seeds() if strategy.generalizes else [],
+        fixed_maps=[m.name for m in scenarios.fixed_maps],
+        history=[h.to_dict() for h in session.history],
+    )
+    save_run(record, directory)
+    return record

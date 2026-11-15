@@ -27,7 +27,8 @@
     "stall_time": 4.0,
     "stall_distance": 0.5,
     "checkpoint_every": 5,
-    "map_files": []
+    "map_files": [],
+    "max_iterations": 30
   },
   "fitness": {
     "progress": 100.0,
@@ -54,5 +55,25 @@
     "init_scale": 0.5,
     "crossover": {"type": "uniform", "rate": 0.8},
     "mutation": {"rate": 0.1, "sigma": 0.3, "sigma_decay": 1.0}
+  },
+  "rule_policy": {"near_distance": 1.0, "mid_distance": 2.5},
+  "aco_rules": {
+    "alpha": 1.0,
+    "beta": 2.0,
+    "evaporation": 0.2,
+    "elite_ants": 5,
+    "tau_min": 0.01,
+    "tau_max": 1.0
+  },
+  "aco_routes": {
+    "alpha": 1.0,
+    "beta": 3.0,
+    "evaporation": 0.2,
+    "elite_ants": 5,
+    "tau_min": 0.01,
+    "tau_max": 1.0,
+    "route_attraction": 1.5,
+    "clearance": 0.7,
+    "follower": {"cruise_speed": 0.8, "lookahead": 0.8, "safety_margin": 0.5, "reaction_time": 0.4}
   }
 }

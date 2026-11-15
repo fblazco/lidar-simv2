@@ -132,12 +132,12 @@ class Panel:
             self._button(rect, *spec)
         self.y += height + 6
 
-    def stepper(self, label: str, value: str, on_minus, on_plus) -> None:
-        """Etiqueta con valor y botones - / + a la derecha."""
+    def stepper(self, label: str, value: str, on_minus, on_plus, minus: str = "-", plus: str = "+") -> None:
+        """Etiqueta con valor y dos botones a la derecha (- / + o anterior / siguiente)."""
         draw_text(self.surface, self.fonts, f"{label}: {value}", (self.x, self.y + 5), 13)
         right = self.x + self.width
-        self._button(pygame.Rect(right - 62, self.y, 28, 24), "-", on_minus)
-        self._button(pygame.Rect(right - 28, self.y, 28, 24), "+", on_plus)
+        self._button(pygame.Rect(right - 62, self.y, 28, 24), minus, on_minus)
+        self._button(pygame.Rect(right - 28, self.y, 28, 24), plus, on_plus)
         self.y += 30
 
     def text_field(self, field: TextInput, label: str) -> None:

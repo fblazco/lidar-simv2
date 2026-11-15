@@ -7,7 +7,7 @@ from config import load_config
 def test_default_config_has_every_section_the_app_needs():
     cfg = load_config()
     for section in ("window", "simulation", "vehicle", "lidar", "map", "observation", "policy",
-                    "training", "fitness", "generator", "genetic"):
+                    "training", "fitness", "generator", "genetic", "aco_rules", "aco_routes"):
         assert section in cfg, section
     assert cfg["lidar"]["num_rays"] == 72 and cfg["lidar"]["fov_deg"] == 360
 

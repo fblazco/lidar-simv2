@@ -71,6 +71,8 @@ class Simulation:
             navigation_mode=self.world.navigation_mode,
             lidar_range=mobile.sensor.max_range if mobile.sensor is not None else 0.0,
             time=self.time,
+            x=state.x,
+            y=state.y,
         )
 
     def step(self) -> None:

@@ -5,7 +5,7 @@ reales y usa ``MLPControllerFactory`` para convertirlos en controladores.
 """
 from control.policy_controller import build_mlp_controller_factory
 from optimization.genetic.genetic_algorithm import GAConfig, GeneticAlgorithm
-from optimization.registry import StrategyBundle, StrategyPlugin
+from optimization.registry import StrategyBundle, StrategyPlugin, for_any_scenario
 
 
 def build(config: dict) -> StrategyBundle:
@@ -16,7 +16,20 @@ def build(config: dict) -> StrategyBundle:
         config=GAConfig.from_dict(config["genetic"]),
         seed=config["training"]["seed"],
     )
-    return StrategyBundle(strategy, controller_factory)
+    return StrategyBundle(strategy, for_any_scenario(controller_factory))
 
 
-PLUGIN = StrategyPlugin(name="genetic", label="Algoritmo genético (GA)", build=build)
+PLUGIN = StrategyPlugin(
+    name="genetic",
+    label="Algoritmo genético (GA)",
+    build=build,
+    short_label="Genético",
+    description="Evoluciona los pesos de una red neuronal que conduce el vehículo.",
+    stat_labels={
+        "mutation_rate": "Tasa de mutación",
+        "mutation_sigma": "Sigma de mutación",
+        "crossover_rate": "Tasa de crossover",
+        "elitism": "Elitismo",
+        "diversity": "Diversidad genética",
+    },
+)

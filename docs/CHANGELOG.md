@@ -2,6 +2,27 @@
 
 Historial resumido. El detalle de cada tarea está en `reports/`.
 
+## 0.2.0 — 2026-11-14
+
+Algoritmo a elección, colonias de hormigas y comparación de corridas.
+Informe: `reports/2026-11-14-seleccion-de-algoritmo-aco-y-comparacion.md`.
+
+- El algoritmo de aprendizaje se elige en la ventana (selector en la vista de
+  entrenamiento) y en la línea de comandos (`train --strategy`).
+- Plugin `aco_rules`: colonia de hormigas que elige con feromonas una maniobra
+  para cada situación; controlador `RuleTableController`.
+- Plugin `aco_routes`: colonia de hormigas que traza una ruta por mapa;
+  controlador `RouteController`; feromonas y rutas visibles durante el entrenamiento.
+- Los entrenamientos tienen fin: límite de generaciones (`training.max_iterations`)
+  o botón Finalizar. Al terminar se muestran sus estadísticas y se guardan en
+  `logs/runs/`.
+- Vista de resultados: resumen de una corrida o comparación de dos, con tabla y
+  curvas superpuestas. En la terminal: `main.py runs` y `main.py compare`.
+- Resumen al terminar un episodio de conducción manual.
+- Contratos de optimización ampliados para soluciones que dependen del mapa
+  (ADR-0005); la observación incluye la posición del vehículo.
+- La prueba de independencia ahora borra cada algoritmo por separado y todos a la vez.
+
 ## 0.1.1 — 2026-11-12
 
 Documentación completada. Informe: `reports/2026-11-12-completar-readme-y-docs.md`.

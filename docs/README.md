@@ -16,6 +16,7 @@ y Claude colaboran. Todo está en Markdown.
 | ¿Qué problemas conocemos? | [status/KNOWN_ISSUES.md](status/KNOWN_ISSUES.md) |
 | ¿Qué sigue? | [status/ROADMAP.md](status/ROADMAP.md) y [status/BACKLOG.md](status/BACKLOG.md) |
 | ¿Cómo uso la aplicación? | [GUIDE.md](GUIDE.md) |
+| ¿Qué algoritmos hay y cómo rinden? | [GUIDE.md](GUIDE.md) y [status/PROJECT_STATUS.md](status/PROJECT_STATUS.md) |
 | ¿Cómo pido un cambio? | [requests/README.md](requests/README.md) |
 
 ## Especificación (la edita el usuario)

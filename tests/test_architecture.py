@@ -47,14 +47,32 @@ def test_logic_packages_never_depend_on_pygame_or_the_interface(package):
     assert offenders(package, ("pygame", "ui", "rendering")) == []
 
 
+PLUGINS = sorted(p.name for p in (ROOT / "optimization").iterdir() if (p / "__init__.py").exists())
+PLUGIN_MODULES = tuple(f"optimization.{name}" for name in PLUGINS)
+
+
+def test_the_three_algorithms_are_plugins():
+    assert PLUGINS == ["aco_routes", "aco_rules", "genetic"]
+
+
 def test_generic_optimization_code_never_depends_on_a_concrete_algorithm():
-    assert offenders("optimization", ("optimization.genetic",), exclude="genetic") == []
+    generic = [p for p in (ROOT / "optimization").glob("*.py")]
+    bad = [f"{p.name} importa {name}" for p in generic for name in imports_of(p)
+           if name.startswith(PLUGIN_MODULES)]
+    assert bad == []
 
 
 def test_ui_and_bootstrap_never_import_a_concrete_algorithm():
-    assert offenders("ui", ("optimization.genetic",)) == []
-    assert not any(n.startswith("optimization.genetic") for n in imports_of(ROOT / "bootstrap.py"))
-    assert not any(n.startswith("optimization.genetic") for n in imports_of(ROOT / "main.py"))
+    assert offenders("ui", PLUGIN_MODULES) == []
+    for entry in ("bootstrap.py", "main.py"):
+        assert not any(n.startswith(PLUGIN_MODULES) for n in imports_of(ROOT / entry))
+
+
+@pytest.mark.parametrize("plugin", PLUGINS)
+def test_plugins_do_not_depend_on_each_other_or_on_the_simulator(plugin):
+    others = tuple(m for m in PLUGIN_MODULES if m != f"optimization.{plugin}")
+    forbidden = others + ("simulation", "sensors", "editor", "rendering", "ui", "pygame")
+    assert offenders(f"optimization/{plugin}", forbidden) == []
 
 
 def test_control_and_sensors_do_not_depend_on_the_simulator():
@@ -73,16 +91,15 @@ def test_simulation_only_knows_the_controller_contract():
     assert bad == []
 
 
-def test_genetic_operators_do_not_touch_the_simulator():
-    assert offenders("optimization/genetic", ("simulation", "sensors", "editor", "rendering", "ui", "pygame")) == []
-
-
-def test_project_works_after_deleting_the_genetic_package(tmp_path):
-    """Borrar optimization/genetic/ no rompe simulador, editor, sensores ni la aplicación."""
+@pytest.mark.parametrize("removed", [["genetic"], ["aco_rules"], ["aco_routes"], PLUGINS])
+def test_project_works_after_deleting_algorithm_packages(tmp_path, removed):
+    """Borrar uno o todos los algoritmos no rompe simulador, editor, sensores ni la aplicación."""
     copy = tmp_path / "proyecto"
     shutil.copytree(ROOT, copy, ignore=shutil.ignore_patterns(
         ".venv", ".git", "__pycache__", ".pytest_cache", "tests", "docs", "logs", "models"))
-    shutil.rmtree(copy / "optimization" / "genetic")
+    for name in removed:
+        shutil.rmtree(copy / "optimization" / name)
+    remaining = sorted(set(PLUGINS) - set(removed))
     script = (
         "import os; os.environ['SDL_VIDEODRIVER'] = 'dummy'\n"
         "from config import load_config\n"
@@ -100,10 +117,12 @@ def test_project_works_after_deleting_the_genetic_package(tmp_path):
         "assert sim.mobiles[0].scan.shape == (72,)\n"
         "editor = MapEditor(); editor.add_route_cell((1, 1)); editor.add_route_cell((5, 1))\n"
         "assert len(editor.map.route) == 5\n"
-        "assert discover_plugins() == {}\n"
+        f"assert sorted(discover_plugins()) == {remaining!r}\n"
         "from ui.application import Application\n"
         "app = Application(cfg, base_dir='.')\n"
-        "app.run_frames(5); app.set_mode('simulation'); app.run_frames(5); app.close()\n"
+        "app.run_frames(5); app.set_mode('simulation'); app.run_frames(5)\n"
+        "app.simulation_view.set_sub_mode('training'); app.run_frames(3)\n"
+        "app.simulation_view.set_sub_mode('results'); app.run_frames(3); app.close()\n"
         "print('OK')\n"
     )
     result = subprocess.run([sys.executable, "-c", script], cwd=copy, capture_output=True, text=True)

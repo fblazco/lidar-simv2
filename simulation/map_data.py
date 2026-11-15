@@ -6,6 +6,8 @@ es una lista ORDENADA de celdas: la navegación nunca interpreta caracteres ASCI
 """
 from __future__ import annotations
 
+import hashlib
+import json
 from collections import deque
 from dataclasses import asdict, dataclass, field, fields
 from typing import List, Optional, Tuple
@@ -131,6 +133,13 @@ class MapData:
 
     def copy(self) -> "MapData":
         return MapData.from_dict(self.to_dict())
+
+    def fingerprint(self) -> str:
+        """Huella del contenido, sin nombre ni semilla: dos mapas iguales la comparten."""
+        data = self.to_dict()
+        data.pop("name")
+        data.pop("seed")
+        return hashlib.sha1(json.dumps(data, sort_keys=True).encode("utf-8")).hexdigest()[:16]
 
     # --- validación ------------------------------------------------------
     def validate(self) -> List[str]:

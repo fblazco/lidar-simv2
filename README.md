@@ -1,15 +1,15 @@
 # Simulador LiDAR con algoritmos evolutivos
 
 Simulador 2D de un vehículo autónomo que detecta obstáculos con un sensor LiDAR
-de 72 rayos y **aprende a navegar mediante algoritmos evolutivos**. Incluye un
-editor visual de mapas en ASCII y permite ver varios individuos de una misma
-generación entrenando a la vez.
+de 72 rayos y **aprende a navegar con el algoritmo que elijas**: un algoritmo
+genético o dos variantes de colonia de hormigas. Incluye un editor visual de
+mapas en ASCII, permite ver varios individuos de una misma generación
+entrenando a la vez y compara los resultados de dos entrenamientos.
 
 ![Entrenamiento con cuatro agentes visibles](docs/images/entrenamiento.png)
 
-*Generación 41 de un entrenamiento con algoritmo genético: cuatro individuos,
-cada uno en su propio escenario, con su LiDAR, su fitness parcial y la evolución
-del mejor fitness y del promedio.*
+*Cuatro individuos de una generación, cada uno en su propio escenario, con su
+LiDAR, su fitness parcial y la evolución del mejor fitness y del promedio.*
 
 ## Qué hace
 
@@ -21,14 +21,25 @@ del mejor fitness y del promedio.*
   dirección, aceleración y frenado; colisiones; LiDAR por raycasting geométrico.
 - **Dos modos de navegación** con un mismo simulador: seguir la ruta dibujada
   (pudiendo apartarse para esquivar y volver) o navegar libremente al destino.
-- **Entrenamiento evolutivo**: un algoritmo genético evoluciona los pesos de una
-  red neuronal que conduce el vehículo. Cada individuo se evalúa en varios
-  escenarios aleatorios, iguales para toda la generación y reproducibles por semilla.
+- **Tres algoritmos de aprendizaje, a elección**:
+
+  | Algoritmo | Qué aprende |
+  |---|---|
+  | Genético (GA) | Los pesos de una red neuronal que conduce el vehículo |
+  | Colonia de hormigas: reglas | Una tabla "situación → maniobra" elegida con feromonas |
+  | Colonia de hormigas: rutas | Una ruta, celda a celda, sobre cada mapa de entrenamiento |
+
+- **Evaluación comparable**: cada individuo se prueba en varios escenarios
+  aleatorios, iguales para toda la generación y reproducibles por semilla; lo
+  aprendido se valida en mapas que no intervienen en la selección.
 - **Con o sin ventana**: se entrena viendo `visible_agents` individuos a la vez,
   o desde la terminal sin abrir nada. Hay checkpoints y un registro por generación.
+- **Resultados y comparación**: al finalizar un entrenamiento se muestran sus
+  estadísticas y quedan guardadas; dos corridas se comparan lado a lado, con las
+  mismas métricas y sus curvas superpuestas.
 - **Arquitectura modular**: el simulador no conoce ningún algoritmo de
-  aprendizaje. El algoritmo genético es un plugin; PSO, ACO o ABC pueden
-  agregarse después sin tocar la física ni el vehículo.
+  aprendizaje. Cada algoritmo es un plugin en su propia carpeta; agregar otro
+  (PSO, ABC) no exige tocar la física ni el vehículo.
 
 ## Requisitos
 
@@ -65,10 +76,12 @@ python3 -m pip install --target .venv/lib/python3.10/site-packages -r requiremen
 1. Se abre el **editor** (F1). Pulsa "Cargar..." y elige `ejemplo_ruta`, o
    dibuja tu propio mapa.
 2. Pasa a **simulación** con F2 y conduce con las flechas o WASD.
-3. Pulsa `T` para la vista de **entrenamiento** y `Espacio` para empezar.
-   Con `+` aceleras a los agentes visibles.
-4. Cuando termine alguna generación, vuelve a `M` y pulsa `P` para ver conducir
-   a la mejor política.
+3. Pulsa `T` para la vista de **entrenamiento**, elige el algoritmo con `<` `>`
+   y pulsa `Espacio`. Con `+` aceleras a los agentes visibles.
+4. La corrida termina sola al llegar al límite de generaciones, o cuando pulsas
+   `F`. Se abre la vista de **resultados** con sus estadísticas.
+5. Repite con otro algoritmo: al finalizar, las dos corridas aparecen comparadas.
+6. Vuelve a `M` y pulsa `P` para ver conducir a lo aprendido.
 
 ## La aplicación
 
@@ -90,39 +103,54 @@ radio y sentido. El panel indica si el mapa está listo para simular o qué falt
 
 ### Simulación (F2)
 
+Tiene tres vistas: **M** manual, **T** entrenar y **C** resultados.
+
 ![Conducción manual con el LiDAR visible](docs/images/manual.png)
 
 - **Manual (`M`)**: flechas o WASD. `R` reinicia, `N` genera un mapa aleatorio,
-  `P` alterna entre el piloto manual y la mejor política entrenada. El vehículo
-  se dibuja como `o` sobre `| |` y su LiDAR está siempre visible.
-- **Entrenamiento (`T`)**: `Espacio` inicia o pausa, `+` y `-` cambian la
-  velocidad. El panel muestra generación, individuos evaluados, mejor fitness,
-  promedio, tasa de éxito, colisiones, distancia, tiempo, validación, las
-  estadísticas propias del algoritmo y el gráfico de evolución.
+  `P` alterna entre el piloto manual y lo aprendido por el último entrenamiento.
+  El vehículo se dibuja como `o` sobre `| |` y su LiDAR está siempre visible. Al
+  terminar el episodio aparece su resumen (resultado, tiempo, distancia, fitness).
+- **Entrenar (`T`)**: se elige el algoritmo y el límite de generaciones;
+  `Espacio` inicia o pausa, `F` finaliza, `+` y `-` cambian la velocidad. El
+  panel muestra generación, individuos evaluados, mejor fitness, promedio, tasa
+  de éxito, colisiones, distancia, tiempo, validación, las estadísticas propias
+  del algoritmo y el gráfico de evolución.
+
+![Colonia de hormigas trazando rutas](docs/images/feromonas.png)
+
+*Colonia de hormigas de rutas: las manchas anaranjadas son la feromona de cada
+mapa y la línea azul es la ruta que sigue cada hormiga.*
+
+- **Resultados (`C`)**: lista de corridas terminadas. Con una seleccionada se ve
+  su resumen; con dos, la comparación.
+
+![Comparación de dos corridas](docs/images/comparacion.png)
 
 Guía completa: [docs/GUIDE.md](docs/GUIDE.md).
 
-## Entrenar sin ventana
+## Entrenar y comparar sin ventana
 
 ```bash
-.venv/bin/python main.py train --generations 50 --name experimento1
+.venv/bin/python main.py train --strategy genetic --generations 30
+.venv/bin/python main.py train --strategy aco_rules --generations 30
+.venv/bin/python main.py compare genetic aco_rules
 ```
 
-Escribe el checkpoint en `models/experimento1.npz` y una línea JSON por
-generación (con las semillas de los escenarios) en `logs/experimento1.jsonl`.
-Para continuar un entrenamiento:
-
-```bash
-.venv/bin/python main.py train --generations 50 --resume models/experimento1.npz --name experimento1
-```
+`--strategy` acepta `genetic`, `aco_rules` y `aco_routes`. Cada entrenamiento
+imprime su resumen al terminar y deja el checkpoint en `models/<nombre>.npz`,
+una línea JSON por generación en `logs/<nombre>.jsonl` y el registro de la
+corrida en `logs/runs/<nombre>.json`. `python main.py runs` lista las corridas,
+y `--resume models/<nombre>.npz` continúa una.
 
 ## Configuración
 
 Todos los parámetros ajustables están en
-[config/default.json](config/default.json): población, agentes visibles,
-semilla, escenarios, pesos del fitness, vehículo, LiDAR, red neuronal,
-generador de mapas y operadores genéticos. Para cambiarlos sin editar ese
-archivo, crea un JSON solo con lo que quieras modificar:
+[config/default.json](config/default.json): algoritmo, población, agentes
+visibles, límite de generaciones, semilla, escenarios, pesos del fitness,
+vehículo, LiDAR, red neuronal, generador de mapas y los parámetros de cada
+algoritmo. Para cambiarlos sin editar ese archivo, crea un JSON solo con lo que
+quieras modificar:
 
 ```json
 {"training": {"population_size": 80, "visible_agents": 6}, "lidar": {"max_range": 10.0}}
@@ -135,26 +163,28 @@ archivo, crea un JSON solo con lo que quieras modificar:
 ## Estructura del proyecto
 
 ```
-main.py              entrada: ventana, o `train` sin ventana
+main.py              entrada: ventana, o train / runs / compare sin ventana
 bootstrap.py         ensambla el sistema a partir de la configuración
 config/              parámetros (default.json)
 simulation/          mundo, vehículo, obstáculos, colisiones, navegación
 sensors/             LiDAR
-control/             contrato Controller, control manual, red MLP, ObservationBuilder
-optimization/        contrato LearningStrategy, fitness, evaluación, entrenamiento, checkpoints
-optimization/genetic/   algoritmo genético (plugin)
+control/             contrato Controller y controladores: manual, red MLP, tabla de reglas, seguidor de rutas
+optimization/        contrato LearningStrategy, fitness, evaluación, entrenamiento, checkpoints, corridas
+optimization/genetic/      plugin: algoritmo genético
+optimization/aco_rules/    plugin: colonia de hormigas de reglas de conducción
+optimization/aco_routes/   plugin: colonia de hormigas de rutas por mapa
 editor/              modelo del editor, guardado y carga, generador de mapas
 rendering/           dibujo ASCII
-ui/                  ventana, vistas y panel de entrenamiento
+ui/                  ventana, vistas, panel de entrenamiento y resultados
 maps/                mapas guardados (incluye dos ejemplos)
-models/  logs/       checkpoints y registros de entrenamiento (no se versionan)
+models/  logs/       checkpoints, registros y corridas (no se versionan)
 tests/               pruebas automáticas
 docs/                especificación, arquitectura, estado y solicitudes
 ```
 
 La regla central: **el simulador, el vehículo, el sensor y el editor no
-dependen de ningún algoritmo de aprendizaje**. Si se borra
-`optimization/genetic/`, todo lo demás sigue funcionando, y una prueba lo
+dependen de ningún algoritmo de aprendizaje**. Si se borra la carpeta de
+cualquier algoritmo, todo lo demás sigue funcionando, y una prueba lo
 comprueba. Detalle en [docs/architecture/OVERVIEW.md](docs/architecture/OVERVIEW.md).
 
 ## Pruebas
@@ -164,15 +194,15 @@ comprueba. Detalle en [docs/architecture/OVERVIEW.md](docs/architecture/OVERVIEW
 ```
 
 Cubren movimiento, colisiones, LiDAR, trayectorias de obstáculos, mapas,
-reproducibilidad por semilla, operadores genéticos, fitness, evolución de
-generaciones, la aplicación (sin ventana real), la independencia entre el
-simulador y el algoritmo, y los enlaces de esta documentación.
+reproducibilidad por semilla, los tres algoritmos, fitness, evolución de
+generaciones, corridas y comparación, la aplicación (sin ventana real), la
+independencia entre el simulador y los algoritmos, y los enlaces de esta
+documentación.
 
 ## Estado
 
-Primera versión funcional: cumple los doce criterios de aceptación de la
-[especificación](docs/specification/PROJECT_SPEC.md). Qué está verificado, qué
-es parcial y qué falta: [docs/status/PROJECT_STATUS.md](docs/status/PROJECT_STATUS.md).
+Qué está verificado, qué es parcial, qué falta y los resultados medidos de cada
+algoritmo: [docs/status/PROJECT_STATUS.md](docs/status/PROJECT_STATUS.md).
 Lo que sigue: [docs/status/ROADMAP.md](docs/status/ROADMAP.md).
 
 ## Documentación

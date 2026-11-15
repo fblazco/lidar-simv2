@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import importlib
 import pkgutil
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable, Dict
 
 from control.controller import Controller
@@ -21,7 +21,7 @@ class StrategyBundle:
     """Lo que entrega un plugin: el optimizador y cómo convertir sus soluciones en controladores."""
 
     strategy: LearningStrategy
-    controller_factory: Callable[[Any], Controller]
+    controller_factory: Callable[[Any, Any], Controller]   # (solución, escenario) -> controlador
 
 
 @dataclass(frozen=True)
@@ -29,6 +29,18 @@ class StrategyPlugin:
     name: str                                  # identificador usado en la configuración
     label: str                                 # nombre para mostrar
     build: Callable[[dict], StrategyBundle]    # recibe la configuración completa
+    short_label: str = ""                      # nombre breve para botones
+    description: str = ""                      # una línea que explica qué aprende
+    stat_labels: Dict[str, str] = field(default_factory=dict)   # nombre visible de sus estadísticas
+
+    def __post_init__(self) -> None:
+        if not self.short_label:
+            object.__setattr__(self, "short_label", self.label)
+
+
+def for_any_scenario(factory: Callable[[Any], Controller]) -> Callable[[Any, Any], Controller]:
+    """Adapta una fábrica cuyas soluciones no dependen del escenario (p. ej. pesos de una red)."""
+    return lambda solution, scenario: factory(solution)
 
 
 def discover_plugins() -> Dict[str, StrategyPlugin]:

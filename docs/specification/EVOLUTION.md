@@ -17,6 +17,13 @@ feromonas y construcción de soluciones; ABC con fuentes de alimento y abejas.
 La interfaz común facilita la integración, pero cada algoritmo conserva sus
 mecanismos propios.
 
+## Selección del algoritmo
+
+> Agregado el 2026-11-14 a pedido del usuario.
+
+El simulador debe poder entrenar el móvil con distintos algoritmos, y el
+algoritmo con que se entrena queda a elección del usuario.
+
 ## Primer algoritmo: Genetic Algorithms (GA)
 
 GA tradicional que evoluciona redes neuronales de arquitectura fija. El genoma
@@ -83,6 +90,29 @@ Incluir un gráfico de evolución del fitness promedio y del mejor fitness.
 Preparar estadísticas específicas de GA (tasa de mutación, diversidad de la
 población) cuando corresponda.
 
+## Ant Colony Optimization (ACO)
+
+> Agregado el 2026-11-14 a pedido del usuario.
+
+Agregar un algoritmo de colonia de hormigas. El usuario eligió tener **las dos
+variantes**, como algoritmos separados y seleccionables:
+
+- **Reglas de conducción:** las hormigas eligen con feromonas una maniobra para
+  cada situación (lo que ve el LiDAR y dónde está el objetivo). Lo aprendido
+  sirve en cualquier mapa.
+- **Rutas sobre cada mapa:** ACO clásico; las hormigas trazan un camino celda a
+  celda con feromonas en la grilla y un controlador lo sigue.
+
+Ambas usan los mecanismos propios de ACO: feromonas, evaporación y
+construcción probabilística de soluciones.
+
+## Resultados y comparación
+
+> Agregado el 2026-11-14 a pedido del usuario.
+
+- Mostrar estadísticas cuando se finaliza una simulación.
+- Si se corrieron dos distintas, permitir compararlas.
+
 ## Checkpoints
 
 Se debe poder guardar y recuperar el progreso del entrenamiento.
@@ -90,7 +120,6 @@ Se debe poder guardar y recuperar el progreso del entrenamiento.
 ## Algoritmos futuros (no implementar todavía)
 
 - **PSO:** partículas con posición, velocidad, pBest y gBest.
-- **ACO:** feromonas, evaporación y construcción probabilística de soluciones.
 - **ABC:** employed bees, onlooker bees, scout bees y abandono de fuentes.
 
 Solo se definen las interfaces y dependencias necesarias para integrarlos más

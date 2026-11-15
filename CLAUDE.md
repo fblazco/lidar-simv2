@@ -7,15 +7,17 @@ detallada vive en `docs/`; este archivo solo dice qué leer y qué reglas respet
 
 Simulador 2D (Python, Pygame, NumPy) de un vehículo autónomo con un LiDAR de 72
 rayos que aprende a navegar mediante algoritmos evolutivos. Incluye un editor
-visual de mapas en ASCII. El primer algoritmo es un Algoritmo Genético (GA); la
-arquitectura está preparada para sumar PSO, ACO y ABC como plugins.
+visual de mapas en ASCII. El algoritmo lo elige el usuario entre tres plugins:
+algoritmo genético (`genetic`), colonia de hormigas de reglas (`aco_rules`) y
+colonia de hormigas de rutas (`aco_routes`). PSO y ABC podrán sumarse igual.
 
 ## Objetivos
 
 1. Crear, guardar y cargar mapas con caminos, obstáculos estáticos y dinámicos.
 2. Simular vehículos de movimiento continuo con LiDAR por raycasting.
-3. Entrenar políticas con algoritmos evolutivos, con o sin ventana.
+3. Entrenar con el algoritmo que elija el usuario, con o sin ventana.
 4. Ver varios individuos de una generación a la vez y cómo evoluciona el fitness.
+5. Mostrar las estadísticas de un entrenamiento al finalizarlo y comparar dos.
 
 ## Principios arquitectónicos (no negociables)
 
@@ -27,9 +29,10 @@ arquitectura está preparada para sumar PSO, ACO y ABC como plugins.
   acciones; la estrategia genera y optimiza soluciones. Se conectan con una
   `controller_factory`, nunca importándose entre sí.
 - **Dependencias inyectadas.** El móvil no importa clases de algoritmos.
-- **Prueba de fuego:** borrar `optimization/genetic/` no debe romper simulador,
-  editor, vehículos, sensores ni obstáculos; agregar un algoritmo nuevo no debe
-  exigir tocar la física ni el móvil. `tests/test_architecture.py` lo verifica.
+- **Prueba de fuego:** borrar la carpeta de cualquier algoritmo no debe romper
+  simulador, editor, vehículos, sensores ni obstáculos; agregar un algoritmo
+  nuevo no debe exigir tocar la física, el móvil ni la interfaz.
+  `tests/test_architecture.py` lo verifica. Ningún plugin importa a otro.
 - No forzar a todos los algoritmos a usar la misma representación interna.
 - No crear clases vacías ni implementaciones simuladas de algoritmos futuros.
 
@@ -47,18 +50,20 @@ arquitectura está preparada para sumar PSO, ACO y ABC como plugins.
 ## Estructura
 
 ```
-main.py            entrada: ventana o `train` sin ventana
+main.py            entrada: ventana, o train / runs / compare sin ventana
 bootstrap.py       ensamblado: construye todo a partir de la configuración
 config/            default.json y cargador
 simulation/        mundo, vehículo, obstáculos, colisiones, navegación
 sensors/           LiDAR
-control/           contrato Controller, control manual, política MLP, ObservationBuilder
-optimization/      contrato LearningStrategy, fitness, evaluación, sesión, checkpoints
-optimization/genetic/   plugin GA (único algoritmo concreto)
+control/           contrato Controller y controladores: manual, política MLP, tabla de reglas, seguidor de rutas
+optimization/      contrato LearningStrategy, fitness, evaluación, sesión, checkpoints, corridas y comparación
+optimization/genetic/      plugin: algoritmo genético
+optimization/aco_rules/    plugin: colonia de hormigas de reglas de conducción
+optimization/aco_routes/   plugin: colonia de hormigas de rutas por mapa
 editor/            modelo del editor, guardado/carga, generador aleatorio
 rendering/         dibujo ASCII en Pygame
-ui/                ventana, vistas y panel de entrenamiento
-maps/ models/ logs/     datos del usuario (mapas, checkpoints, registros); maps/ejemplo_* son de muestra
+ui/                ventana, vistas, panel de entrenamiento y resultados
+maps/ models/ logs/     datos del usuario (mapas, checkpoints, registros, corridas en logs/runs/); maps/ejemplo_* son de muestra
 tests/             pruebas (pytest)
 docs/              documentación viva
 ```

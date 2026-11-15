@@ -88,6 +88,7 @@ class IterationStats:
     validation_success_rate: Optional[float] = None
     training_seeds: List[int] = field(default_factory=list)
     strategy: Dict[str, float] = field(default_factory=dict)   # estadísticas propias del algoritmo
+    seconds: float = 0.0              # tiempo de cómputo dedicado a la iteración
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -99,12 +100,15 @@ class IterationStats:
 
 class TrainingSession:
     def __init__(self, strategy: LearningStrategy, evaluator: Evaluator, scenarios: ScenarioProvider,
-                 visible_agents: int = 0, validate_every: int = 1) -> None:
+                 visible_agents: int = 0, validate_every: int = 1, max_iterations: int = 0) -> None:
         self.strategy = strategy
         self.evaluator = evaluator
         self.scenarios = scenarios
         self.visible_agents = max(0, int(visible_agents))
         self.validate_every = int(validate_every)
+        self.max_iterations = int(max_iterations)   # 0 = sin límite
+        self._seconds = 0.0
+        self._started_at = 0.0
         self.history: List[IterationStats] = []
         self.evaluations = 0
         self.episodes = 0
@@ -134,17 +138,30 @@ class TrainingSession:
     def is_collected(self, run: CandidateEvaluation) -> bool:
         return run.candidate.id in self._results
 
-    def best_controller(self) -> Optional[Controller]:
-        """Controlador con la mejor solución de la última iteración terminada."""
+    @property
+    def finished(self) -> bool:
+        """Se alcanzó el límite de iteraciones (nunca, si no hay límite)."""
+        return 0 < self.max_iterations <= self.strategy.iteration
+
+    def best_controller(self, map_data: MapData) -> Optional[Controller]:
+        """Controlador con la mejor solución de la última iteración, para conducir ``map_data``.
+
+        Lanza ``UnknownScenarioError`` si la solución solo sirve en los mapas con que se entrenó.
+        """
         if self.best_solution is None:
             return None
-        return self.evaluator.controller_factory(self.best_solution)
+        return self.evaluator.controller_factory(self.best_solution, Scenario(map_data, None, map_data.name))
+
+    def training_maps(self) -> List[MapData]:
+        """Mapas de entrenamiento de la iteración en curso (o de la próxima)."""
+        return [s.map_data for s in self.scenarios.training_set(self.strategy.iteration)]
 
     # --- ciclo de entrenamiento -------------------------------------------------
     def begin_iteration(self) -> None:
-        candidates = self.strategy.ask()
         self._training_seeds = self.scenarios.training_seeds(self.strategy.iteration)
         self._scenario_set = self.scenarios.training_set(self.strategy.iteration)
+        self.strategy.prepare(self._scenario_set)
+        candidates = self.strategy.ask()
         self._pending = deque(candidates)
         self._candidate_count = len(candidates)
         self._results = {}
@@ -167,9 +184,16 @@ class TrainingSession:
         máximo. Devuelve las estadísticas cuando la iteración acaba de terminar
         (la siguiente empezará en la próxima llamada); si no, ``None``.
         """
+        started = self._started_at = time.perf_counter()
+        try:
+            return self._advance(visible_steps, started + time_budget)
+        finally:
+            if self.phase != IDLE:      # al cerrar la iteración el tiempo ya quedó en sus estadísticas
+                self._seconds += time.perf_counter() - started
+
+    def _advance(self, visible_steps: int, deadline: float) -> Optional[IterationStats]:
         if self.phase == IDLE:
             self.begin_iteration()
-        deadline = time.perf_counter() + time_budget
         if self.phase == EVALUATING:
             self._advance_visible(visible_steps)
             self._advance_background(deadline)
@@ -229,7 +253,7 @@ class TrainingSession:
     def _begin_validation(self) -> None:
         self.phase = VALIDATING
         due = self.validate_every > 0 and self.current_iteration % self.validate_every == 0
-        if due and self.scenarios.validation_count > 0:
+        if due and self.strategy.generalizes and self.scenarios.validation_count > 0:
             best = max(self._ordered_results(), key=lambda r: r.fitness)
             self._validation = self.evaluator.start(
                 Candidate(-1, best.candidate.solution), self.scenarios.validation_set()
@@ -265,7 +289,9 @@ class TrainingSession:
             ),
             training_seeds=list(self._training_seeds),
             strategy={k: float(v) for k, v in self.strategy.statistics().items()},
+            seconds=self._seconds + (time.perf_counter() - self._started_at),
         )
+        self._seconds = 0.0
         self.history.append(stats)
         self.phase = IDLE
         return stats

@@ -17,7 +17,7 @@ def make_evaluator(**settings):
     # La "solución" de estos candidatos de prueba es simplemente la aceleración constante.
     return Evaluator(
         make_factory(max_time=20.0),
-        controller_factory=lambda throttle: ConstantController(0.0, throttle),
+        controller_factory=lambda throttle, scenario: ConstantController(0.0, throttle),
         fitness=FitnessFunction(FitnessWeights()),
         settings=EvaluationSettings(stall_time=2.0, stall_distance=0.5, **settings),
     )
@@ -84,3 +84,30 @@ def test_a_running_evaluation_exposes_its_own_simulation_for_display():
     assert first.simulation is not second.simulation
     assert first.simulation.world is not second.simulation.world
     assert first.episode_index == 0 and first.episode_count == 2
+
+
+def test_controller_factory_receives_the_scenario_of_each_episode():
+    seen = []
+
+    def factory(throttle, scenario):
+        seen.append(scenario.label)
+        return ConstantController(0.0, throttle)
+
+    evaluator = Evaluator(make_factory(max_time=20.0), factory, FitnessFunction(FitnessWeights()),
+                          EvaluationSettings(stall_time=2.0))
+    evaluator.evaluate([Candidate(0, 1.0)], SCENARIOS)
+    assert seen == ["libre", "bloqueado"]
+
+
+def test_result_keeps_the_score_of_each_episode_in_scenario_order():
+    evaluator = make_evaluator()
+    result = evaluator.evaluate([Candidate(0, 1.0)], SCENARIOS)[0]
+    assert result.scores == [evaluator.fitness(m) for m in result.episodes]
+    assert result.scores[0] > result.scores[1]
+
+
+def test_scenario_key_identifies_the_map_content_not_its_name():
+    same = Scenario(corridor_map(name="otro_nombre"), seed=5)
+    assert same.key == SCENARIOS[0].key
+    assert SCENARIOS[1].key != SCENARIOS[0].key
+    assert Scenario(corridor_map(start_heading=0.3)).key != SCENARIOS[0].key

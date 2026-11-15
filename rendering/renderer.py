@@ -30,6 +30,8 @@ RAY = (30, 44, 40)
 RAY_HIT = (46, 110, 78)
 HIT_POINT = (126, 231, 135)
 TARGET = (110, 118, 129)
+HEAT = (255, 166, 87)            # intensidad por celda que publica una estrategia (p. ej. feromona)
+PLANNED = (121, 192, 255)        # ruta planificada por el controlador de un móvil
 VEHICLE_COLORS = {
     Status.ACTIVE: (240, 246, 252),
     Status.COLLIDED: (248, 81, 73),
@@ -171,8 +173,40 @@ class WorldRenderer:
         sprite = self._vehicle_sprite(max(9, int(viewport.scale * 0.6)), color, state.heading)
         surface.blit(sprite, sprite.get_rect(center=center))
 
-    def draw_simulation(self, surface, viewport: Viewport, simulation, cache_key=None) -> None:
+    # --- capas opcionales -------------------------------------------------------------
+    def draw_heatmap(self, surface, viewport: Viewport, grid, cache_key=None) -> None:
+        """Intensidad 0..1 por celda (filas x columnas) como manchas translúcidas sobre el mapa."""
+        key = ("heat", cache_key, viewport.rect.size) if cache_key is not None else None
+        layer = self._layers.get(key) if key is not None else None
+        if layer is None:
+            layer = pygame.Surface(viewport.rect.size, pygame.SRCALPHA)
+            rows, cols = grid.shape
+            width, height = viewport.rect.width / cols, viewport.rect.height / rows
+            for row in range(rows):
+                for col in range(cols):
+                    value = float(grid[row, col])
+                    if value > 0.03:
+                        layer.fill((*HEAT, int(25 + 95 * value)),
+                                   (int(col * width), int(row * height), int(width) + 1, int(height) + 1))
+            if key is not None:
+                if len(self._layers) > 32:
+                    self._layers.clear()
+                self._layers[key] = layer
+        surface.blit(layer, viewport.rect.topleft)
+
+    def draw_path(self, surface, viewport: Viewport, points, color=PLANNED) -> None:
+        """Polilínea en coordenadas del mundo (la ruta que un controlador piensa seguir)."""
+        if len(points) >= 2:
+            pygame.draw.lines(surface, color, False, [viewport.to_screen(x, y) for x, y in points], 1)
+
+    def draw_simulation(self, surface, viewport: Viewport, simulation, cache_key=None, heatmap=None,
+                        heat_key=None) -> None:
         self.draw_map(surface, viewport, simulation.world.map, cache_key)
+        if heatmap is not None:
+            self.draw_heatmap(surface, viewport, heatmap, heat_key)
         self.draw_obstacles(surface, viewport, simulation.world)
         for mobile in simulation.mobiles:
+            planned = getattr(mobile.controller, "planned_path", None)
+            if planned is not None:
+                self.draw_path(surface, viewport, planned)
             self.draw_mobile(surface, viewport, mobile)

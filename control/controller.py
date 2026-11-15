@@ -52,6 +52,8 @@ class Observation:
     navigation_mode: str          # FREE_NAVIGATION o ROUTE_FOLLOWING
     lidar_range: float            # alcance máximo del sensor (unidades)
     time: float                   # tiempo de simulación (s)
+    x: float = 0.0                # posición absoluta (unidades del mundo)
+    y: float = 0.0
 
 
 class Controller(ABC):

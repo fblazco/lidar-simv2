@@ -1,18 +1,27 @@
 """Punto de entrada.
 
-    python main.py                         abre la aplicación (editor + simulación)
-    python main.py train --generations 20  entrena sin ventana gráfica
+    python main.py                                    abre la aplicación (editor + simulación)
+    python main.py train --strategy aco_rules         entrena sin ventana con el algoritmo elegido
+    python main.py runs                               lista las corridas terminadas
+    python main.py compare genetic aco_rules          compara dos corridas
 """
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
-from bootstrap import build_training_session, load_training_session, save_training_session
+from bootstrap import (available_strategies, build_training_session, finish_run, load_training_session,
+                       save_training_session, with_strategy)
 from config import load_config
+from optimization.results import format_comparison, format_summary, list_runs, load_run
 from optimization.training import TrainingLog
 
 PROJECT_DIR = Path(__file__).resolve().parent
+
+
+def runs_dir(base_dir) -> Path:
+    return Path(base_dir) / "logs" / "runs"
 
 
 def run_gui(args) -> None:
@@ -28,13 +37,17 @@ def run_training(args) -> None:
         print(f"Reanudando desde {args.resume} (generación {session.strategy.iteration})")
     else:
         config = load_config(args.config)
+        if args.strategy:
+            config = with_strategy(config, args.strategy)
         session = build_training_session(config)
+    name = args.name or session.strategy.name
     session.visible_agents = 0                # sin ventana no hay agentes visibles
-    checkpoint = base / "models" / f"{args.name}.npz"
-    log = TrainingLog(base / "logs" / f"{args.name}.jsonl")
+    checkpoint = base / "models" / f"{name}.npz"
+    log = TrainingLog(base / "logs" / f"{name}.jsonl")
     every = config["training"].get("checkpoint_every", 0)
-    print(f"Estrategia: {session.strategy.name} | semilla: {session.scenarios.seed} | "
-          f"semillas de validación: {session.scenarios.validation_seeds()}")
+    validation_seeds = session.scenarios.validation_seeds() if session.strategy.generalizes else "no aplica"
+    print(f"Algoritmo: {session.strategy.name} | semilla: {session.scenarios.seed} | "
+          f"semillas de validación: {validation_seeds}")
     try:
         for _ in range(args.generations):
             stats = session.run_iteration()
@@ -42,31 +55,73 @@ def run_training(args) -> None:
             validation = f"{stats.validation_fitness:7.1f}" if stats.validation_fitness is not None else "   -   "
             print(f"gen {stats.iteration:4d} | mejor {stats.best_fitness:7.1f} | media {stats.mean_fitness:7.1f} | "
                   f"éxito {stats.success_rate * 100:5.1f}% | colisiones {stats.collisions:3d} | "
-                  f"validación {validation} | evaluaciones {stats.evaluations}", flush=True)
+                  f"validación {validation} | {stats.seconds:5.1f} s", flush=True)
             if every and stats.iteration % every == 0:
                 save_training_session(session, checkpoint, config)
     except KeyboardInterrupt:
         print("\nInterrumpido: se guarda la última generación completa.")
     save_training_session(session, checkpoint, config)
-    print(f"Checkpoint: {checkpoint}\nRegistro:   {log.path}")
+    record = finish_run(session, config, runs_dir(base), name)
+    if record is not None:
+        print(f"\nResumen de la corrida '{record.run_id}'\n{format_summary(record)}")
+    print(f"\nCheckpoint: {checkpoint}\nRegistro:   {log.path}\nCorrida:    {runs_dir(base) / (name + '.json')}")
+
+
+def find_run(base_dir, reference: str):
+    """Una corrida por nombre (en logs/runs/) o por ruta a su archivo."""
+    for path in (Path(reference), runs_dir(base_dir) / f"{reference}.json"):
+        if path.is_file():
+            return load_run(path)
+    raise ValueError(f"No existe la corrida '{reference}'. Usa `python main.py runs` para ver las disponibles.")
+
+
+def show_runs(args) -> None:
+    records = list_runs(runs_dir(args.base_dir))
+    if not records:
+        print("No hay corridas terminadas todavía.")
+    for record in records:
+        metrics = record.metrics()
+        print(f"{record.run_id:<28} {record.strategy:<11} {metrics['iterations']:4d} gen.  "
+              f"mejor {metrics['best_fitness']:7.1f}  éxito {metrics['final_success_rate'] * 100:5.1f} %  "
+              f"{record.finished_at}")
+
+
+def show_comparison(args) -> None:
+    print(format_comparison(find_run(args.base_dir, args.first), find_run(args.base_dir, args.second)))
+    print("\n* mejor valor de la fila")
 
 
 def main(argv=None) -> None:
-    parser = argparse.ArgumentParser(description="Simulador 2D de navegación autónoma con LiDAR y algoritmos evolutivos")
+    strategies = ", ".join(sorted(available_strategies())) or "ninguno instalado"
+    parser = argparse.ArgumentParser(
+        description="Simulador 2D de navegación autónoma con LiDAR y algoritmos evolutivos")
     parser.add_argument("--config", help="archivo JSON con los parámetros que se quieren cambiar")
     parser.add_argument("--base-dir", default=str(PROJECT_DIR), help="carpeta que contiene maps/, models/ y logs/")
     commands = parser.add_subparsers(dest="command")
+
     train = commands.add_parser("train", help="entrenar sin ventana gráfica")
+    train.add_argument("--strategy", help=f"algoritmo de aprendizaje ({strategies}); por defecto, el de la configuración")
     train.add_argument("--generations", type=int, default=10)
     train.add_argument("--config", help="archivo JSON con los parámetros que se quieren cambiar")
     train.add_argument("--resume", help="checkpoint .npz desde el que continuar")
-    train.add_argument("--name", default="entrenamiento", help="nombre del checkpoint y del registro")
+    train.add_argument("--name", help="nombre del checkpoint, del registro y de la corrida (por defecto, el del algoritmo)")
     train.add_argument("--base-dir", default=str(PROJECT_DIR))
+
+    runs = commands.add_parser("runs", help="listar las corridas terminadas")
+    runs.add_argument("--base-dir", default=str(PROJECT_DIR))
+
+    compare = commands.add_parser("compare", help="comparar dos corridas terminadas")
+    compare.add_argument("first", help="nombre de la corrida A (o ruta a su archivo .json)")
+    compare.add_argument("second", help="nombre de la corrida B")
+    compare.add_argument("--base-dir", default=str(PROJECT_DIR))
+
     args = parser.parse_args(argv)
-    if args.command == "train":
-        run_training(args)
-    else:
-        run_gui(args)
+    actions = {"train": run_training, "runs": show_runs, "compare": show_comparison}
+    try:
+        actions.get(args.command, run_gui)(args)
+    except ValueError as error:
+        print(f"error: {error}", file=sys.stderr)
+        raise SystemExit(2)
 
 
 if __name__ == "__main__":

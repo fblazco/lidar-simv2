@@ -7,6 +7,10 @@ posición de una partícula, una fuente de alimento, un camino construido...).
 Quien sabe convertir una solución en un controlador es la ``controller_factory``
 que cada plugin entrega junto con su estrategia (ver ``optimization/registry.py``).
 
+Además del núcleo obligatorio hay tres puntos de extensión opcionales, para
+algoritmos cuyo resultado depende del escenario (p. ej. planificar una ruta por
+mapa): ``prepare``, ``generalizes`` y ``cell_heatmap``.
+
 Una estrategia nunca toca la física ni el renderizado.
 """
 from __future__ import annotations
@@ -20,6 +24,10 @@ import numpy as np
 from optimization.fitness import EpisodeMetrics
 
 
+class UnknownScenarioError(ValueError):
+    """La solución no sabe conducir en ese escenario (no formó parte de su entrenamiento)."""
+
+
 @dataclass
 class Candidate:
     id: int          # único dentro de la tanda entregada por ask()
@@ -31,6 +39,7 @@ class CandidateResult:
     candidate: Candidate
     fitness: float
     episodes: List[EpisodeMetrics] = field(default_factory=list)
+    scores: List[float] = field(default_factory=list)   # fitness de cada episodio, en el orden de los escenarios
 
 
 @dataclass
@@ -43,6 +52,14 @@ class StrategyState:
 
 class LearningStrategy(ABC):
     name: str = "strategy"
+    generalizes: bool = True   # lo aprendido sirve en escenarios no vistos (permite validar)
+
+    def prepare(self, scenarios: Sequence[Any]) -> None:
+        """Recibe los escenarios de la iteración antes de cada ``ask``. Opcional."""
+
+    def cell_heatmap(self, scenario: Any) -> Optional[np.ndarray]:
+        """Intensidad 0..1 por celda (filas x columnas) para dibujar sobre el mapa. Opcional."""
+        return None
 
     @property
     @abstractmethod
