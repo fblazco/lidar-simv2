@@ -2,6 +2,26 @@
 
 Historial resumido. El detalle de cada tarea está en `reports/`.
 
+## 0.4.0 — 2026-11-15
+
+Interfaz nueva en modo claro y oscuro.
+Informe: `reports/2026-11-15-rediseno-de-la-interfaz.md`.
+
+- Dos temas monocromos (blancos, grises y negros) con la misma disposición de
+  pantalla: claro y oscuro. Botón en la barra superior y `window.theme`.
+- Barra superior con cuatro secciones: Editor de mapas, Conducir, Entrenar y
+  Resultados. `F1`, `F2`, `M`, `T` y `C` siguen funcionando.
+- Los algoritmos se eligen con tarjetas: ícono (ADN, hormiga con casco…) y una
+  escena del simulador que muestra cómo funciona cada uno.
+- El ícono y la escena los aporta cada plugin (`icon`, `demo`); la interfaz no
+  conoce algoritmos por nombre (ADR-0009).
+- Editor con barra de herramientas; conducción y entrenamiento con el camino
+  recorrido; entrenamiento con un agente en grande y los demás en miniatura.
+- Comparación con barras y recuadros para lo esencial y la tabla completa a
+  pedido. Sin colores: A y B se distinguen por trazo y relleno.
+- Nuevo: `rendering/palette.py`, `rendering/scene.py`, `ui/theme.py`,
+  `tests/test_theme.py`. Componentes de `ui/widgets.py` rehechos.
+
 ## 0.3.0 — 2026-11-15
 
 Mapas nuevos por generación, camino más corto y evasión con FTG y APF.

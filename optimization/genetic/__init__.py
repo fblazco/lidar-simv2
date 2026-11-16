@@ -3,6 +3,8 @@
 Este es el único lugar donde el GA se conecta con el resto: evoluciona vectores
 reales y usa ``MLPControllerFactory`` para convertirlos en controladores.
 """
+from pathlib import Path
+
 from control.policy_controller import build_mlp_controller_factory
 from optimization.genetic.genetic_algorithm import GAConfig, GeneticAlgorithm
 from optimization.registry import StrategyBundle, StrategyPlugin, for_any_scenario
@@ -19,6 +21,8 @@ def build(config: dict) -> StrategyBundle:
     return StrategyBundle(strategy, for_any_scenario(controller_factory))
 
 
+ASSETS = Path(__file__).parent      # el ícono y la escena viajan con el plugin
+
 PLUGIN = StrategyPlugin(
     name="genetic",
     label="Algoritmo genético (GA)",
@@ -32,4 +36,6 @@ PLUGIN = StrategyPlugin(
         "elitism": "Elitismo",
         "diversity": "Diversidad genética",
     },
+    icon=str(ASSETS / "icon.svg"),
+    demo=str(ASSETS / "demo.json"),
 )

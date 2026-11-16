@@ -47,6 +47,8 @@ algoritmos y la comparación estadística funcionen.
   simulador, editor, vehículos, sensores ni obstáculos; agregar un algoritmo
   nuevo no debe exigir tocar la física, el móvil ni la interfaz.
   `tests/test_architecture.py` lo verifica. Ningún plugin importa a otro.
+- **La interfaz no conoce algoritmos por nombre.** El ícono y la escena que
+  explican cada algoritmo viajan dentro de su plugin (`icon`, `demo`).
 - No forzar a todos los algoritmos a usar la misma representación interna.
 - No crear clases vacías ni implementaciones simuladas de algoritmos futuros.
 
@@ -58,6 +60,10 @@ algoritmos y la comparación estadística funcionen.
 - Movimiento y colisiones independientes del renderizado; paso de tiempo fijo.
 - Pygame solo en `rendering/` y `ui/`. El entrenamiento debe correr sin ventana
   y nunca bloquear el ciclo de Pygame.
+- Interfaz monocroma (blancos, grises y negros) en dos temas, claro y oscuro,
+  con la misma disposición. Los colores salen de `ui/theme.py` y
+  `rendering/palette.py`, nunca de una vista; sin color, dos estados deben
+  diferir también en forma o en texto.
 - Las dimensiones de entrada de la red salen solo de `ObservationBuilder.size`.
 - La ruta es una lista ordenada de celdas; nunca interpretar caracteres ASCII.
 
@@ -77,8 +83,8 @@ optimization/aco_rules/    plugin: colonia de hormigas de reglas de conducción
 optimization/aco_routes/   plugin: colonia de hormigas de rutas por mapa
 optimization/reactive/     plugin de referencia: navegación sin aprendizaje
 editor/            modelo del editor, guardado/carga, generador aleatorio
-rendering/         dibujo ASCII en Pygame
-ui/                ventana, vistas, panel de entrenamiento y resultados
+rendering/         dibujo ASCII en Pygame, paletas clara y oscura, escenas de los algoritmos
+ui/                ventana, temas, componentes, vistas e íconos propios (ui/assets/)
 maps/ models/ logs/     datos del usuario (mapas, checkpoints, registros, corridas en logs/runs/); maps/ejemplo_* son de muestra
 tests/             pruebas (pytest)
 docs/              documentación viva

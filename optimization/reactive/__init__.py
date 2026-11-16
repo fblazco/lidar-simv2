@@ -5,6 +5,7 @@ objetivo. Con mapas nuevos en cada iteración, sus estadísticas miden cuánto
 rinde esa navegación mínima y, sobre todo, cuánto aporta por sí solo el
 algoritmo de evasión elegido (FTG, APF).
 """
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from control.goal_controller import GoalSeekingController
@@ -53,10 +54,14 @@ def build(config: dict) -> StrategyBundle:
     return StrategyBundle(GoalSeeking(), for_any_scenario(lambda solution: GoalSeekingController(**settings)))
 
 
+ASSETS = Path(__file__).parent      # el ícono y la escena viajan con el plugin
+
 PLUGIN = StrategyPlugin(
     name="reactive",
     label="Sin aprendizaje: ir directo al objetivo (referencia)",
     build=build,
     short_label="Sin aprender",
     description="No aprende: apunta al objetivo. Es la línea de base y permite medir FTG y APF por sí solos.",
+    icon=str(ASSETS / "icon.svg"),
+    demo=str(ASSETS / "demo.json"),
 )

@@ -6,76 +6,118 @@
 .venv/bin/python main.py
 ```
 
-Una sola ventana con dos modos: **F1 Editor de mapas** y **F2 Simulación**.
+Una sola ventana. La barra superior tiene cuatro secciones: **Editor de mapas**,
+**Conducir**, **Entrenar** y **Resultados**. A la derecha, un botón cambia entre
+el **modo claro** y el **modo oscuro**: los dos tienen la misma disposición y
+solo cambian los colores (blancos, grises y negros). El tema con que se abre se
+fija en `window.theme` (`light` u `dark`); el elegido con el botón no se guarda.
 
-## Modo 1: Editor
+Teclado: `F1` abre el editor y `F2` la simulación; dentro de ella, `M` es
+Conducir, `T` Entrenar y `C` Resultados.
+
+## Editor de mapas
 
 ![Editor de mapas](images/editor.png)
 
+Las herramientas están en la columna de la izquierda; cada una muestra el
+símbolo que coloca en el mapa.
+
 | Herramienta | Tecla | Uso |
 |---|---|---|
-| Camino | 1 | Arrastrar. El orden en que se dibuja es el orden de la ruta. |
+| Camino `/` | 1 | Arrastrar. El orden en que se dibuja es el orden de la ruta. |
 | Borrar | 2 | Clic o arrastre sobre la celda. |
-| Obstáculo X | 3 | Clic o arrastre. |
-| Móvil * | 4 | Elegir Horizontal, Vertical o Circular y arrastrar: en los lineales, de un extremo al otro (empieza en el primero); en el circular, del centro a la posición inicial. Clic sin arrastrar usa un recorrido por defecto. Clic sobre uno existente lo selecciona para editar velocidad, pausa, extremos, radio y sentido. `Supr` lo elimina. |
-| Inicio S | 5 | Clic para ubicar el vehículo; arrastrar para orientarlo. |
-| Destino G | 6 | Clic. |
+| Obstáculo `X` | 3 | Clic o arrastre. |
+| Móvil `*` | 4 | Elegir Horizontal, Vertical o Circular y arrastrar: en los lineales, de un extremo al otro (empieza en el primero); en el circular, del centro a la posición inicial. Clic sin arrastrar usa un recorrido por defecto. Clic sobre uno existente lo selecciona para editar velocidad, pausa, extremos, radio y sentido. `Supr` lo elimina. |
+| Inicio `S` | 5 | Clic para ubicar el vehículo; arrastrar para orientarlo. |
+| Destino `G` | 6 | Clic. |
 
-El panel permite además elegir el modo de navegación (seguir ruta o libre),
-cambiar el tamaño de la grilla, poner nombre, guardar y cargar (`maps/*.json`),
-generar un mapa aleatorio y vaciar el mapa. Abajo se indica si el mapa está
-listo para simular o qué le falta.
+Sobre el mapa están su nombre (clic para escribirlo) y el modo de navegación:
+seguir la ruta o navegación libre. Debajo se indica si el mapa está listo para
+simular o qué le falta. El panel de la derecha muestra la herramienta elegida o
+las propiedades del obstáculo móvil seleccionado, el tamaño de la grilla y los
+botones Guardar, Cargar… (lista de `maps/*.json`), Nuevo y Aleatorio.
 
 El repositorio trae dos mapas de ejemplo en `maps/`: `ejemplo_ruta` (seguimiento
 de ruta, con los tres tipos de obstáculo móvil) y `ejemplo_libre` (navegación
-libre). Se abren con "Cargar...".
+libre). Se abren con "Cargar…".
 
 Símbolos: `|` `-` `/` `\` caminos, `X` obstáculo estático, `*` obstáculo
-dinámico, `S` inicio, `G` destino, `o` sobre `| |` el vehículo.
+dinámico, `S` inicio, `G` destino, `o` sobre `| |` el vehículo. No hay colores:
+cada elemento se distingue por su símbolo y su brillo.
 
-## Modo 2: Simulación
+## Conducir
 
-Tiene tres vistas: **M** Manual, **T** Entrenar y **C** Resultados.
-
-### Manual (M)
-
-![Conducción manual](images/manual.png)
+![Conducción con lo aprendido](images/manual.png)
 
 Se conduce el mapa del editor con flechas o WASD. Si el mapa está incompleto se
-usa uno aleatorio. `R` reinicia, `N` genera otro mapa y `P` alterna entre el
-piloto manual y **lo aprendido** por el último entrenamiento.
+usa uno aleatorio. Arriba se elige el piloto: **Manual** o **Lo aprendido** por
+el último entrenamiento (`P` alterna). `R` reinicia y `N` genera otro mapa. Una
+línea marca el camino recorrido.
 
-Cuando el episodio termina (el vehículo llega, choca o se queda sin tiempo)
-aparece su resumen: resultado, tiempo, distancia, velocidad media, avance,
-desvío medio, suavidad y el fitness que habría obtenido.
+El panel muestra tiempo, distancia, velocidad y avance del episodio. Cuando
+termina (el vehículo llega, choca o se queda sin tiempo) aparece su resumen:
+resultado, tiempo, distancia, velocidad media, avance, desvío medio, suavidad y
+el fitness que habría obtenido.
 
 Con la colonia de rutas, "lo aprendido" solo existe para los mapas con que
 entrenó: si el mapa actual no es uno de ellos, se muestra el primero de
 entrenamiento.
 
-### Entrenar (T)
+## Entrenar
 
-![Entrenamiento](images/entrenamiento.png)
+### Preparar la corrida
+
+![Tarjetas para elegir navegación y evasión](images/preparar.png)
+
+Antes de empezar se elige con tarjetas. Cada tarjeta lleva el ícono del
+algoritmo, una frase que dice qué hace y una **escena**: un cuadro del simulador
+con el algoritmo funcionando.
+
+| Fila | Qué se elige |
+|---|---|
+| 1 · Navegación | Quién decide hacia dónde ir: el algoritmo que se entrena. |
+| 2 · Evasión | Quién esquiva los obstáculos: lo aprendido, FTG o APF. |
+| 3 · Mapas y duración | Tipo de mapas aleatorios (libres, con ruta o mixtos), generaciones tras las que la corrida finaliza sola (`∞` entrena hasta pulsar Finalizar) y si se suma el mapa del editor a los de cada individuo. |
+
+"Empezar entrenamiento" (o `Espacio`) inicia la corrida. "Cargar un
+entrenamiento guardado" retoma el checkpoint más reciente de `models/`.
+
+Qué muestra cada escena:
+
+| Tarjeta | En la escena |
+|---|---|
+| Genético | Los recorridos de toda una generación sobre el mismo mapa; el más grueso es el mejor y las cruces marcan choques. |
+| ACO reglas | Los tres sectores del LiDAR (más marcado, obstáculo más cerca) y el abanico de maniobras: flecha más gruesa, más feromona; la más clara es la elegida. |
+| ACO rutas | La feromona de cada celda y la mejor ruta trazada. |
+| Sin aprender | La línea recta al destino y la cruz donde choca. |
+| Aprendida | El recorrido de un modelo entrenado; los rayos del LiDAR cercanos a un obstáculo van resaltados. |
+| FTG | Los huecos libres, el elegido resaltado, la dirección deseada (línea cortada) y el rumbo final (flecha gruesa). |
+| APF | El círculo de influencia, los empujes de cada punto del obstáculo, la atracción al destino (línea cortada) y la fuerza resultante (flecha gruesa). |
+
+### Corrida en curso
+
+![Entrenamiento en modo oscuro](images/entrenamiento.png)
 
 | Control | Tecla | Qué hace |
 |---|---|---|
-| Navegación `<` `>` | | Quién decide hacia dónde ir: el algoritmo que se entrena. |
-| Evasión `<` `>` | | Quién esquiva los obstáculos: lo aprendido, FTG o APF. |
-| Mapas `<` `>` | | Tipo de mapas aleatorios: libres, con ruta dibujada o mixtos. |
-| Iniciar / Pausar | Espacio | Arranca o detiene el entrenamiento. |
-| Nuevo | | Descarta el entrenamiento actual y prepara otro con la selección de los tres controles anteriores. |
+| Iniciar / Pausar / Continuar | Espacio | Arranca o detiene el entrenamiento. |
 | Finalizar | F | Da por terminada la corrida, guarda su registro y muestra sus estadísticas. |
-| Velocidad `-` `+` | `-` `+` | Velocidad de los agentes visibles (x1 a x32). |
-| Límite `-` `+` | | Generaciones tras las que la corrida finaliza sola. "Sin límite" entrena hasta pulsar Finalizar. |
-| Guardar checkpoint / Cargar último | | Guarda en `models/` o retoma el más reciente. |
-| Usar el mapa del editor | | Suma ese mapa a los de cada individuo (al pulsar Nuevo). |
+| Velocidad `−` `+` | `-` `+` | Velocidad de los agentes visibles (×1 a ×32). |
+| Botones 1, 2, 3… o clic en una miniatura | | Eligen qué agente se ve en grande. |
+| Guardar checkpoint | | Guarda la corrida en `models/`. |
+| Nueva corrida | | Descarta la corrida actual y vuelve a las tarjetas. |
 
-Se muestran `visible_agents` individuos de la generación en curso, cada uno en
-su propio escenario; el resto se evalúa sin dibujarse. Cada vista indica el
-número de individuo, el episodio en curso (uno por escenario), su fitness
-parcial y su estado. El vehículo se ve blanco mientras está activo, rojo si
-chocó, verde si llegó y gris si se le acabó el tiempo. El entrenamiento solo
-avanza mientras esta vista está abierta.
+Se muestran `visible_agents` individuos de la generación en curso: uno en grande
+y los demás en miniatura; el resto se evalúa sin dibujarse. Sobre el agente
+grande se lee el número de individuo, el mapa en curso (uno por escenario), su
+fitness parcial y su estado; una línea marca su camino. El vehículo se ve más
+apagado cuando chocó o se quedó sin tiempo. El entrenamiento solo avanza
+mientras esta vista está abierta.
+
+A la derecha están la generación en curso, el avance y las cifras propias del
+algoritmo. Abajo, tres tarjetas: la última generación (fitness, éxito,
+colisiones, eficiencia del camino, tiempo), la validación y la evolución del
+fitness (mejor en línea sólida, promedio en línea cortada).
 
 Cada generación se entrena con **mapas aleatorios nuevos**, iguales para todos
 sus individuos, y el mejor se prueba en un conjunto fijo de mapas de validación
@@ -106,22 +148,25 @@ nada y muestra qué tan difíciles son los mapas.
 
 ![Colonia de rutas con sus feromonas](images/feromonas.png)
 
-Con ACO rutas se ven las feromonas de cada mapa (manchas anaranjadas, más
-intensas donde se concentra el rastro) y, en azul, la ruta que sigue cada hormiga.
-Para que la colonia aprenda un mapa propio, dibújalo en el editor y activa
-"Usar el mapa del editor" antes de pulsar Nuevo.
+Con ACO rutas se ven las feromonas de cada mapa (celdas sombreadas, más
+intensas donde se concentra el rastro) y la ruta que sigue cada hormiga. Para
+que la colonia aprenda un mapa propio, dibújalo en el editor y activa "Sumar el
+mapa del editor" antes de empezar.
 
-### Resultados (C)
+## Resultados
 
 ![Comparación de dos corridas](images/comparacion.png)
 
-Cada corrida finalizada queda en la lista, de la más reciente a la más antigua.
+Cada corrida finalizada queda en la lista, de la más reciente a la más antigua,
+con los íconos de su navegación y de su evasión.
 
-- **Una seleccionada:** su resumen y sus curvas de fitness y de éxito.
-- **Dos seleccionadas (A y B):** la misma tabla lado a lado, con el mejor valor
-  de cada fila en verde, las curvas de ambas superpuestas y una frase que dice
-  si la diferencia de éxito en validación es estadísticamente significativa.
-  Si no usaron los mismos mapas, se avisa.
+- **Una seleccionada:** su resumen completo y sus curvas de fitness y de éxito.
+- **Dos seleccionadas (A y B):** una frase que dice si la diferencia de éxito en
+  validación es estadísticamente significativa, barras para los porcentajes más
+  importantes (A maciza, B con contorno), recuadros con el resto de lo esencial
+  y las curvas de ambas superpuestas (A en línea sólida, B en línea cortada). El
+  mejor valor de cada fila va resaltado. "Todas las métricas" cambia a la tabla
+  completa. Si no usaron los mismos mapas, se avisa.
 
 Al finalizar una corrida se abre esta vista con ella como A y, si existe, la
 última corrida de otra combinación como B.
@@ -170,7 +215,7 @@ tocarlo, crear un JSON solo con las claves a modificar y pasarlo con `--config`:
 
 | Sección | Qué controla |
 |---|---|
-| `window` | tamaño de ventana y cuadros por segundo |
+| `window` | tamaño de ventana, cuadros por segundo y tema (`theme`: `light` u `dark`) |
 | `map` | tamaño de grilla por defecto |
 | `simulation` | paso de tiempo, límite del episodio, radio de llegada |
 | `vehicle` | radio, velocidades, aceleración, ángulo de dirección |

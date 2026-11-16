@@ -1,4 +1,4 @@
-"""Ventana única de la aplicación: modo Editor y modo Simulación."""
+"""Ventana única de la aplicación: barra superior con las cuatro secciones y el cambio de tema."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -8,12 +8,18 @@ import pygame
 from bootstrap import build_map_generator
 from editor.map_manager import MapManager
 from rendering.renderer import WorldRenderer
+from rendering.scene import SceneRenderer
 from ui.editor_view import EditorView
 from ui.simulation_view import SimulationView
-from ui.widgets import ACCENT, BACKGROUND, BORDER, BUTTON, BUTTON_ACTIVE, MUTED, PANEL_BG, TEXT, Fonts, draw_text
+from ui.theme import DEFAULT_THEME, other_theme
+from ui.widgets import Toolkit, Ui
 
-TOP_BAR = 40
-MODES = [("editor", "F1 Editor de mapas"), ("simulation", "F2 Simulación")]
+BAR = 64                  # barra superior
+CHROME = 3                # franja metálica bajo la barra
+TOP_BAR = BAR + CHROME
+# (sección, etiqueta, ícono). "editor" es un modo propio; las demás son vistas de la simulación.
+TABS = [("editor", "Editor de mapas", "edit"), ("manual", "Conducir", "drive"),
+        ("training", "Entrenar", "train"), ("results", "Resultados", "results")]
 MODE_KEYS = {pygame.K_F1: "editor", pygame.K_F2: "simulation"}
 
 
@@ -25,20 +31,28 @@ class Application:
         self.screen = pygame.display.set_mode((window["width"], window["height"]), pygame.RESIZABLE)
         self.fps = window["fps"]
         self.clock = pygame.time.Clock()
-        self.fonts = Fonts()
-        self.renderer = WorldRenderer(self.fonts)
+        self.kit = Toolkit(window.get("theme", DEFAULT_THEME))
+        self.fonts = self.kit.fonts
+        self.renderer = WorldRenderer(self.fonts, self.kit.theme.world)
+        self.scenes = SceneRenderer(self.renderer)
         base = Path(base_dir)
-        self.editor_view = EditorView(config, self.fonts, self.renderer, MapManager(base / "maps"),
+        self.editor_view = EditorView(config, self.kit, self.renderer, MapManager(base / "maps"),
                                       build_map_generator(config))
-        self.simulation_view = SimulationView(config, self.fonts, self.renderer, self.editor_view, base)
+        self.simulation_view = SimulationView(config, self.kit, self.renderer, self.scenes, self.editor_view, base)
         self.mode = "editor"
         self.running = True
-        self._tabs = []
+        self.ui: Ui = self.kit.frame(self.screen, (0, 0))
+        self._chrome = {}
         self._layout()
 
     @property
     def view(self):
         return self.editor_view if self.mode == "editor" else self.simulation_view
+
+    @property
+    def tab(self) -> str:
+        """Sección que se está viendo: 'editor', 'manual', 'training' o 'results'."""
+        return "editor" if self.mode == "editor" else self.simulation_view.sub_mode
 
     def set_mode(self, mode: str) -> None:
         if mode == self.mode:
@@ -47,14 +61,31 @@ class Application:
         if mode == "simulation":
             self.simulation_view.enter()
 
+    def open_tab(self, tab: str) -> None:
+        if tab == "editor":
+            self.set_mode("editor")
+        else:
+            self.set_mode("simulation")
+            self.simulation_view.set_sub_mode(tab)
+
+    # --- tema -----------------------------------------------------------------
+    @property
+    def theme(self):
+        return self.kit.theme
+
+    def set_theme(self, name: str) -> None:
+        self.kit.set_theme(name)
+        self.renderer.set_palette(self.kit.theme.world)
+
+    def toggle_theme(self) -> None:
+        self.set_theme(other_theme(self.kit.theme).name)
+
     def _layout(self) -> None:
         self.screen = pygame.display.get_surface()
         width, height = self.screen.get_size()
         area = pygame.Rect(0, TOP_BAR, width, height - TOP_BAR)
         self.editor_view.layout(area)
         self.simulation_view.layout(area)
-        self._tabs = [(pygame.Rect(10 + i * 210, 6, 200, TOP_BAR - 12), mode, label)
-                      for i, (mode, label) in enumerate(MODES)]
 
     # --- ciclo principal ------------------------------------------------------
     def _handle_events(self) -> None:
@@ -66,23 +97,68 @@ class Application:
             elif event.type == pygame.KEYDOWN and event.key in MODE_KEYS:
                 self.set_mode(MODE_KEYS[event.key])
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and event.pos[1] < TOP_BAR:
-                for rect, mode, _ in self._tabs:
-                    if rect.collidepoint(event.pos):
-                        self.set_mode(mode)
+                self.ui.click(event.pos)
             else:
                 self.view.handle_event(event)
 
+    def _chrome_strip(self, width: int) -> pygame.Surface:
+        """Franja metálica: un degradado horizontal entre los tonos del tema."""
+        key = (width, self.theme.name)
+        strip = self._chrome.get(key)
+        if strip is None:
+            stops = self.theme.chrome
+            strip = pygame.Surface((width, CHROME))
+            spans = len(stops) - 1
+            for x in range(width):
+                position = x / max(width - 1, 1) * spans
+                index = min(int(position), spans - 1)
+                t = position - index
+                color = [int(stops[index][i] + (stops[index + 1][i] - stops[index][i]) * t) for i in range(3)]
+                strip.fill(color, (x, 0, 1, CHROME))
+            self._chrome = {key: strip}
+        return strip
+
+    def _draw_bar(self, ui: Ui) -> None:
+        theme, width = ui.theme, self.screen.get_width()
+        compact = width < 1150
+        pad = 20 if compact else 32
+        self.screen.fill(theme.background, (0, 0, width, BAR))
+        self.screen.blit(self._chrome_strip(width), (0, BAR))
+        # marca
+        mark = pygame.Rect(pad, (BAR - 32) // 2, 32, 32)
+        self.kit.shapes.rounded(self.screen, mark, 16, None, theme.text, 2)
+        ui.text("o", (mark.centerx, mark.centery - 1), 15, face="mono", anchor="center")
+        x = mark.right + 11
+        if not compact:
+            x = ui.text("Simulador LiDAR", (x, BAR // 2), 18, face="bold", anchor="midleft").right
+        # secciones
+        x += 20 if compact else 36
+        for tab, label, icon in TABS:
+            active = tab == self.tab
+            color = theme.text if active else theme.muted
+            text_width = self.fonts.width(label, 15, "bold" if active else "sans")
+            rect = pygame.Rect(x, 0, text_width + 18 + 8 + 28, BAR)
+            ui.icon(icon, (rect.x + 14 + 9, BAR // 2), 18, color)
+            ui.text(label, (rect.x + 14 + 26, BAR // 2), 15, color, "bold" if active else "sans", "midleft")
+            if active:
+                self.screen.fill(theme.text, (rect.x, BAR - 3, rect.width, 3))
+            ui.hit(rect, lambda t=tab: self.open_tab(t))
+            x = rect.right + 4
+        # cambio de tema y cuadros por segundo
+        right = width - pad
+        right = ui.text(f"{self.clock.get_fps():3.0f} fps", (right, BAR // 2), 12, theme.muted, "mono", "midright").x - 14
+        other = other_theme(theme)
+        label = other.label
+        toggle = pygame.Rect(0, 0, self.fonts.width(label, 13) + 46, 32)
+        toggle.midright = (right, BAR // 2)
+        ui.button(toggle, label, self.toggle_theme, "control", icon="moon" if other.name == "dark" else "sun", size=13)
+
     def _draw(self) -> None:
-        self.screen.fill(BACKGROUND)
-        self.view.draw(self.screen, pygame.mouse.get_pos())
-        pygame.draw.rect(self.screen, PANEL_BG, (0, 0, self.screen.get_width(), TOP_BAR))
-        pygame.draw.line(self.screen, BORDER, (0, TOP_BAR - 1), (self.screen.get_width(), TOP_BAR - 1))
-        for rect, mode, label in self._tabs:
-            active = mode == self.mode
-            pygame.draw.rect(self.screen, BUTTON_ACTIVE if active else BUTTON, rect, border_radius=4)
-            draw_text(self.screen, self.fonts, label, rect.center, 13, TEXT if active else MUTED, "center")
-        draw_text(self.screen, self.fonts, f"{self.clock.get_fps():3.0f} fps",
-                  (self.screen.get_width() - 12, TOP_BAR // 2), 12, ACCENT, "midright")
+        mouse = pygame.mouse.get_pos()
+        self.screen.fill(self.theme.background)
+        self.view.draw(self.screen, mouse)
+        self.ui = self.kit.frame(self.screen, mouse)
+        self._draw_bar(self.ui)
         pygame.display.flip()
 
     def _frame(self, dt: float) -> None:

@@ -9,10 +9,10 @@ aleatorios que cambian en cada generación y comparas las corridas con las
 mismas métricas y su significancia estadística. Incluye un editor visual de
 mapas en ASCII.
 
-![Entrenamiento con cuatro agentes visibles](docs/images/entrenamiento.png)
+![Tarjetas para elegir la navegación y la evasión](docs/images/preparar.png)
 
-*Cuatro individuos de una generación, cada uno en su propio escenario, con su
-LiDAR, su fitness parcial y la evolución del mejor fitness y del promedio.*
+*Cada algoritmo se elige con una tarjeta que lo muestra funcionando en el
+simulador: arriba, quién aprende el camino; abajo, quién esquiva.*
 
 ## Qué hace
 
@@ -49,6 +49,9 @@ LiDAR, su fitness parcial y la evolución del mejor fitness y del promedio.*
   corto, y la eficiencia de cada llegada entra en el fitness.
 - **Con o sin ventana**: se entrena viendo `visible_agents` individuos a la vez,
   o desde la terminal sin abrir nada. Hay checkpoints y un registro por generación.
+- **Interfaz en modo claro y en modo oscuro**, en blancos, grises y negros: la
+  misma disposición en los dos y un botón para cambiar. Cada algoritmo trae su
+  ícono y una escena del simulador que muestra cómo funciona.
 - **Resultados y comparación estadística**: al finalizar un entrenamiento se
   muestran sus estadísticas y quedan guardadas; dos corridas se comparan lado a
   lado (éxito, colisiones, eficiencia del camino, tiempos), con el intervalo de
@@ -89,16 +92,19 @@ python3 -m pip install --target .venv/lib/python3.10/site-packages -r requiremen
 .venv/bin/python main.py
 ```
 
-1. Se abre el **editor** (F1). Pulsa "Cargar..." y elige `ejemplo_ruta`, o
+1. Se abre el **Editor de mapas**. Pulsa "Cargar…" y elige `ejemplo_ruta`, o
    dibuja tu propio mapa.
-2. Pasa a **simulación** con F2 y conduce con las flechas o WASD.
-3. Pulsa `T` para la vista de **entrenamiento**, elige la navegación, la
-   evasión y el tipo de mapas con `<` `>`, y pulsa `Espacio`. Con `+` aceleras
-   a los agentes visibles.
+2. Pasa a **Conducir**, en la barra superior, y maneja con las flechas o WASD.
+3. En **Entrenar**, elige con las tarjetas quién navega y quién esquiva, el
+   tipo de mapas y las generaciones, y pulsa "Empezar entrenamiento". Con `+`
+   aceleras a los agentes visibles.
 4. La corrida termina sola al llegar al límite de generaciones, o cuando pulsas
-   `F`. Se abre la vista de **resultados** con sus estadísticas.
-5. Repite con otra combinación: al finalizar, las dos corridas aparecen comparadas.
-6. Vuelve a `M` y pulsa `P` para ver conducir a lo aprendido.
+   "Finalizar". Se abre **Resultados** con sus estadísticas.
+5. Repite con otra combinación ("Nueva corrida"): al finalizar, las dos
+   aparecen comparadas.
+6. Vuelve a **Conducir** y elige "Lo aprendido" para ver conducir al modelo.
+
+El botón de la derecha de la barra cambia entre el modo claro y el oscuro.
 
 ## La aplicación
 
@@ -116,31 +122,40 @@ python3 -m pip install --target .venv/lib/python3.10/site-packages -r requiremen
 | | Borrar | `2` clic o arrastre |
 
 Al seleccionar un obstáculo dinámico se editan su velocidad, pausas, extremos,
-radio y sentido. El panel indica si el mapa está listo para simular o qué falta.
+radio y sentido. Bajo el mapa se indica si está listo para simular o qué falta.
 
-### Simulación (F2)
+### Conducir, Entrenar y Resultados (F2)
 
-Tiene tres vistas: **M** manual, **T** entrenar y **C** resultados.
+Son las tres vistas de la simulación. Se abren desde la barra superior o con
+`M`, `T` y `C`.
 
-![Conducción manual con el LiDAR visible](docs/images/manual.png)
+![Conducción con el LiDAR visible](docs/images/manual.png)
 
-- **Manual (`M`)**: flechas o WASD. `R` reinicia, `N` genera un mapa aleatorio,
+- **Conducir (`M`)**: flechas o WASD. `R` reinicia, `N` genera un mapa aleatorio,
   `P` alterna entre el piloto manual y lo aprendido por el último entrenamiento.
-  El vehículo se dibuja como `o` sobre `| |` y su LiDAR está siempre visible. Al
-  terminar el episodio aparece su resumen (resultado, tiempo, distancia, fitness).
-- **Entrenar (`T`)**: se eligen la navegación, la evasión, el tipo de mapas y el
-  límite de generaciones; `Espacio` inicia o pausa, `F` finaliza, `+` y `-`
-  cambian la velocidad. El panel muestra generación, individuos evaluados,
-  fitness, éxito, colisiones, eficiencia del camino, validación, las
-  estadísticas propias del algoritmo y el gráfico de evolución.
+  El vehículo se dibuja como `o` sobre `| |`, su LiDAR está siempre visible y
+  una línea marca el camino recorrido. Al terminar el episodio aparece su
+  resumen (resultado, tiempo, distancia, fitness).
+- **Entrenar (`T`)**: primero se prepara la corrida con las tarjetas de la
+  primera imagen. Al empezar se ve un agente en grande y los demás en
+  miniatura; `Espacio` inicia o pausa, `F` finaliza, `+` y `-` cambian la
+  velocidad. Se muestran la generación, los individuos evaluados, las cifras
+  propias del algoritmo, la última generación (fitness, éxito, colisiones,
+  eficiencia del camino), la validación y la evolución del fitness.
+
+![Entrenamiento en modo oscuro](docs/images/entrenamiento.png)
+
+*Una corrida en curso, en modo oscuro: el agente elegido, los demás en
+miniatura y las cifras de la generación.*
 
 ![Colonia de hormigas trazando rutas](docs/images/feromonas.png)
 
-*Colonia de hormigas de rutas: las manchas anaranjadas son la feromona de cada
-mapa y la línea azul es la ruta que sigue cada hormiga.*
+*Colonia de hormigas de rutas: las celdas sombreadas son la feromona de cada
+mapa y la línea es la ruta que sigue cada hormiga.*
 
 - **Resultados (`C`)**: lista de corridas terminadas. Con una seleccionada se ve
-  su resumen; con dos, la comparación y si su diferencia es significativa.
+  su resumen; con dos, si su diferencia es significativa, barras para lo
+  esencial y, con "Todas las métricas", la tabla completa.
 
 ![Comparación de dos corridas](docs/images/comparacion.png)
 
@@ -167,7 +182,8 @@ la prueba de significancia, y `--resume models/<nombre>.npz` continúa una.
 ## Configuración
 
 Todos los parámetros ajustables están en
-[config/default.json](config/default.json): navegación, evasión, población,
+[config/default.json](config/default.json): tema de la interfaz (`window.theme`:
+`light` u `dark`), navegación, evasión, población,
 agentes visibles, límite de generaciones, semilla, escenarios, pesos del
 fitness, vehículo, LiDAR, red neuronal, generador de mapas y los parámetros de
 cada algoritmo de navegación y de evasión. Para cambiarlos sin editar ese archivo, crea un JSON solo con lo que
@@ -197,13 +213,16 @@ optimization/aco_rules/    plugin: colonia de hormigas de reglas de conducción
 optimization/aco_routes/   plugin: colonia de hormigas de rutas por mapa
 optimization/reactive/     plugin de referencia: navegación sin aprendizaje
 editor/              modelo del editor, guardado y carga, generador de mapas
-rendering/           dibujo ASCII
-ui/                  ventana, vistas, panel de entrenamiento y resultados
+rendering/           dibujo ASCII, paletas clara y oscura, escenas de los algoritmos
+ui/                  ventana, temas, componentes, vistas e íconos propios
 maps/                mapas guardados (incluye dos ejemplos)
 models/  logs/       checkpoints, registros y corridas (no se versionan)
 tests/               pruebas automáticas
 docs/                especificación, arquitectura, estado y solicitudes
 ```
+
+Cada plugin lleva además su ícono (`icon.svg`) y su escena (`demo.json`): la
+interfaz los muestra sin conocer ningún algoritmo por nombre.
 
 La regla central: **el simulador, el vehículo, el sensor y el editor no
 dependen de ningún algoritmo de aprendizaje**. Si se borra la carpeta de
@@ -219,7 +238,8 @@ comprueba. Detalle en [docs/architecture/OVERVIEW.md](docs/architecture/OVERVIEW
 Cubren movimiento, colisiones, LiDAR, trayectorias de obstáculos, mapas,
 reproducibilidad por semilla, los algoritmos de navegación y de evasión, el
 camino más corto, fitness, evolución de generaciones, corridas, comparación y
-su estadística, la aplicación (sin ventana real), la independencia entre el
+su estadística, los temas, íconos y escenas, la aplicación (sin ventana real),
+la independencia entre el
 simulador y los algoritmos, y los enlaces de esta documentación.
 
 ## Estado

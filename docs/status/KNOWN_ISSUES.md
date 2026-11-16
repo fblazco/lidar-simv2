@@ -81,6 +81,24 @@
 
 ## Interfaz
 
-- Falta un recorrido manual sistemático de la interfaz en una ventana real
-  (ver `PROJECT_STATUS.md`); hasta ahora solo se usó así el entrenamiento.
-- La lista "Cargar..." muestra como máximo 8 mapas.
+- **Falta un recorrido manual** de la interfaz en una ventana real (ver
+  `PROJECT_STATUS.md`). Se rehízo entera el 2026-11-15 y solo se comprobó con
+  pruebas automáticas y capturas sin pantalla.
+- **El tema elegido con el botón no se guarda**: al abrir la aplicación vuelve
+  el de `window.theme`.
+- **Sin colores, por diseño.** Que un vehículo llegó, chocó o se quedó sin
+  tiempo se lee en el texto de estado y en que se dibuja más apagado; A y B se
+  distinguen por trazo y relleno.
+- **Las escenas de las tarjetas son fijas.** Se capturaron el 2026-11-15 con los
+  modelos de las corridas de referencia y no cambian con la configuración. El
+  guion que las generó no está en el repositorio; el formato sí está descrito
+  en `architecture/MODULE_CONTRACTS.md`.
+- **Fuentes del sistema.** La interfaz busca Ubuntu, DejaVu Sans, Liberation
+  Sans o Noto Sans, y DejaVu Sans Mono para símbolos y cifras. Si no hay
+  ninguna, Pygame usa su fuente por defecto: los textos cambian de ancho y las
+  flechas de la ayuda de teclado pueden no verse.
+- **Ventanas pequeñas.** Por debajo de 1000×640 algunos textos se recortan con
+  "…" y el panel del editor puede no mostrar todos sus controles.
+- La lista de mapas guardados muestra como máximo 9.
+- En la corrida en curso, las cifras propias del algoritmo solo aparecen si
+  queda espacio en su tarjeta (no caben en ventanas bajas).

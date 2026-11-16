@@ -10,6 +10,7 @@ from __future__ import annotations
 import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Callable, Optional
 
 import numpy as np
@@ -20,6 +21,11 @@ INTENT_SPAN = math.pi / 2.0    # una dirección a fondo significa "quiero ir 90�
 STEERING_GAIN = 2.0            # dirección a fondo con ~30° de error de rumbo
 SPEED_GAIN = 1.5
 GOAL_MARGIN = 0.3              # holgura para dar por despejado el tramo final hasta el destino
+
+
+def asset(name: str) -> str:
+    """Ruta de un archivo de presentación (ícono o escena) de un algoritmo de evasión."""
+    return str(Path(__file__).with_name("assets") / name)
 
 
 def intended_direction(action: Action) -> float:
@@ -96,3 +102,5 @@ class AvoidancePlugin:
     short_label: str
     description: str
     build: Callable[[dict], Optional[ObstacleAvoider]]   # None = no se agrega ninguna capa
+    icon: str = ""                                       # archivo de su ícono (SVG de un solo color), si tiene
+    demo: str = ""                                       # archivo JSON con una escena que lo muestra funcionando

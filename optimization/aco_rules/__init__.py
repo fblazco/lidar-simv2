@@ -3,6 +3,8 @@
 Las hormigas construyen una tabla "situación -> maniobra". Lo aprendido no
 depende de ningún mapa, así que se entrena y se valida igual que el genético.
 """
+from pathlib import Path
+
 from control.rule_controller import build_rule_controller_factory
 from optimization.aco_rules.colony import ACORulesConfig, RuleColony
 from optimization.aco_rules.heuristic import build_heuristic
@@ -20,6 +22,8 @@ def build(config: dict) -> StrategyBundle:
     return StrategyBundle(colony, for_any_scenario(controller_factory))
 
 
+ASSETS = Path(__file__).parent      # el ícono y la escena viajan con el plugin
+
 PLUGIN = StrategyPlugin(
     name="aco_rules",
     label="Colonia de hormigas: reglas de conducción (ACO)",
@@ -33,4 +37,6 @@ PLUGIN = StrategyPlugin(
         "explored_states": "Situaciones encontradas",
         "decisiveness": "Decisión de la colonia",
     },
+    icon=str(ASSETS / "icon.svg"),
+    demo=str(ASSETS / "demo.json"),
 )

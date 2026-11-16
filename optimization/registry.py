@@ -32,6 +32,8 @@ class StrategyPlugin:
     short_label: str = ""                      # nombre breve para botones
     description: str = ""                      # una línea que explica qué aprende
     stat_labels: Dict[str, str] = field(default_factory=dict)   # nombre visible de sus estadísticas
+    icon: str = ""                             # archivo de su ícono (SVG de un solo color), si tiene
+    demo: str = ""                             # archivo JSON con una escena que lo muestra funcionando
 
     def __post_init__(self) -> None:
         if not self.short_label:

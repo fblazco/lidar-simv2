@@ -23,7 +23,7 @@ import math
 
 import numpy as np
 
-from control.avoidance.base import (AvoidancePlugin, ObstacleAvoider, goal_in_sight, intended_direction,
+from control.avoidance.base import (AvoidancePlugin, ObstacleAvoider, asset, goal_in_sight, intended_direction,
                                     speed_guard, steering_towards)
 from control.controller import Action, Observation
 from control.rays import relative_ray_angles
@@ -104,4 +104,6 @@ PLUGIN = AvoidancePlugin(
     short_label="APF",
     description="El destino atrae y cada obstáculo que ve el LiDAR repele; el vehículo sigue la fuerza resultante.",
     build=build,
+    icon=asset("apf.svg"),
+    demo=asset("apf.json"),
 )

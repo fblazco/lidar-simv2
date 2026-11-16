@@ -51,6 +51,19 @@ física ni la implementación del móvil.
 1. **Editor de mapas** — ver [MAPS_AND_EDITOR.md](MAPS_AND_EDITOR.md).
 2. **Simulación** — ver [SIMULATOR.md](SIMULATOR.md) y [EVOLUTION.md](EVOLUTION.md).
 
+## Interfaz (2026-11-15, pedido por el usuario)
+
+- Más amigable, en tonos metálicos **blancos, grises y negros**.
+- **Modo claro y modo oscuro** con la misma disposición de pantalla. El claro es
+  blanco, de líneas finas; el oscuro, grafito con detalles plateados. Fueron los
+  estilos elegidos entre las maquetas (ver
+  `requests/done/2026-11-15-rediseno-de-la-interfaz.md`).
+- Los algoritmos se eligen con un **selector de íconos**, no con flechas: ADN
+  para el genético, una hormiga con casco militar para las colonias de hormigas.
+- Donde aparecía el texto de cada algoritmo va una **explicación visual que se
+  ve como una imagen de la simulación**, no como un dibujo.
+- Antes de cambiar la interfaz se discuten maquetas de las vistas.
+
 ## Requisitos de calidad
 
 - Implementar por etapas y comprobar cada parte antes de continuar.

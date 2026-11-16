@@ -1,6 +1,6 @@
 # Estado del proyecto
 
-Última actualización: 2026-11-15 · Versión: 0.3.0
+Última actualización: 2026-11-15 · Versión: 0.4.0
 
 Solo figura como implementado lo que fue verificado. "Verificado con" indica la
 prueba automática o la comprobación realizada.
@@ -29,6 +29,11 @@ prueba automática o la comprobación realizada.
 | Fin de un entrenamiento: límite de generaciones o botón Finalizar; estadísticas al terminar; corrida guardada en `logs/runs/` | `test_training`, `test_app_smoke`, `test_results` |
 | Comparación de dos corridas con las mismas métricas (ventana y `main.py compare`); lista de corridas (`main.py runs`) | `test_results`, `test_app_smoke` + captura |
 | Resumen al terminar un episodio de conducción manual | `test_app_smoke` + captura |
+| Interfaz en modo claro y en modo oscuro, monocroma, con la misma disposición en los dos; el tema se cambia en la barra superior o con `window.theme` | `test_theme`, `test_app_smoke` + capturas |
+| Barra superior con cuatro secciones: Editor de mapas, Conducir, Entrenar y Resultados | `test_app_smoke` |
+| Algoritmos elegidos con tarjetas: ícono y escena del simulador de cada uno, aportados por su plugin; un plugin sin ellos igual se ofrece | `test_theme`, `test_app_smoke`, `test_architecture` + captura |
+| Entrenamiento con un agente en grande y los demás en miniatura; camino recorrido al conducir y al entrenar | `test_app_smoke` + captura |
+| Comparación con barras y recuadros para lo esencial, y la tabla completa a pedido | `test_app_smoke` + captura |
 | Conducir con lo aprendido por cualquiera de los algoritmos | `test_app_smoke`, `test_aco_routes` + captura |
 | Mapas aleatorios nuevos en cada generación; validación fija de 20 mapas; mapas fijos para las estrategias que no generalizan | `test_training` |
 | Mapas aleatorios de navegación libre con obstáculos y paredes entre inicio y destino; selector de tipo de mapas (libres, con ruta, mixtos) | `test_map_generator`, `test_app_smoke` |
@@ -109,14 +114,15 @@ buscaba mejorar esa generalización.
 
 | Funcionalidad | Qué falta |
 |---|---|
-| Interfaz gráfica | Verificada por pruebas automáticas y capturas con el driver `dummy`. **Falta un recorrido manual** en una ventana real de las vistas nuevas (selectores de navegación, evasión y mapas; Finalizar; resultados y comparación), de cada herramienta del editor, del teclado y del redimensionado. |
+| Interfaz gráfica | Se rehízo entera el 2026-11-15 y está verificada por pruebas automáticas y capturas con el driver `dummy`, en los dos temas y a 1280×800 y 1000×640. **Falta un recorrido manual** en una ventana real: cada sección, cada herramienta del editor, el teclado, el cambio de tema y el redimensionado. |
+| Explicación visual de cada algoritmo | Cada tarjeta muestra una escena fija, capturada de una corrida real. No se anima ni cambia con la configuración; el guion que las generó no está en el repositorio. |
 | Edición de obstáculos dinámicos | El centro de una órbita y la posición inicial no se pueden mover tras crearlos (hay que borrar y volver a crear). |
 | Colonia de rutas con obstáculos móviles | Evita los fijos y espera a los móviles que cruzan; no resuelve los que recorren el propio camino (ver `KNOWN_ISSUES.md`). |
 | Calidad de la comparación | Se midió una sola semilla y 20 mapas de validación: los intervalos de confianza son anchos y casi ninguna diferencia entre combinaciones es significativa. No se ajustaron hiperparámetros de los algoritmos de navegación. |
 
 ## Pendientes
 
-- Parte educativa de la aplicación (postergada a pedido del usuario; etapa 13 del roadmap).
+- Parte educativa de la aplicación (postergada a pedido del usuario; etapa 14 del roadmap). Lo único hecho son las escenas de las tarjetas.
 - PSO y ABC en navegación; DWA y VFH en evasión (previstos como plugins).
 - Todo lo listado en [BACKLOG.md](BACKLOG.md).
 
@@ -143,4 +149,9 @@ Nada en este momento.
 | "Encontrar el camino más corto" | Los mapas aleatorios pasaron a navegación libre por defecto y se mide la eficiencia del camino | Con el camino ya dibujado no hay nada que encontrar. Los mapas con ruta siguen disponibles. Decisión tomada sin poder consultar al usuario (ADR-0008). |
 | FTG y APF | FTG usa el centro angular del hueco; APF suma una componente tangencial; ambos dejan de intervenir con el destino a la vista | Sin esos ajustes chocaban o no llegaban a destinos cercanos a una pared (ADR-0007). |
 | "Elegir distintos algoritmos" de evasión | Se agregó además una navegación sin aprendizaje | Sin ella no se puede medir FTG o APF por sí solos. |
-| Aplicación educativa | No se trabajó | El usuario pidió postergarla; está registrada como rumbo y como etapa 13 del roadmap. |
+| Aplicación educativa | Solo las escenas de las tarjetas de cada algoritmo, pedidas con el rediseño de la interfaz | El usuario pidió postergar el resto; está registrado como rumbo y como etapa 14 del roadmap. |
+| "Un selector donde haya como ícono" para elegir algoritmos | Tarjetas con ícono, escena y descripción; el ícono y la escena están en la carpeta de cada plugin (`icon`, `demo`) | La interfaz no puede conocer algoritmos por nombre (ADR-0009). Un plugin sin ellos se muestra con su inicial. |
+| "Una explicación visual… como una imagen de la simulación" | Una escena fija por algoritmo: un cuadro real del simulador con capas, guardado como datos y dibujado con el tema activo | No es una animación ni se recalcula. Decisión tomada sin consultar al usuario. |
+| Maquetas aprobadas: tipografías Outfit y DM Mono | Fuentes del sistema: Ubuntu o DejaVu Sans, y DejaVu Sans Mono | Usar las de las maquetas exigía descargar y agregar archivos de fuentes. El aspecto es muy parecido. |
+| Maquetas aprobadas: "Hormigas: reglas" y "Hormigas: rutas" | Las tarjetas dicen "ACO reglas" y "ACO rutas" | Son los nombres breves que ya usan los plugins, la documentación y la línea de comandos. |
+| "Dos modos en una misma ventana" | La barra superior muestra cuatro secciones; por dentro siguen siendo Editor y Simulación (con sus vistas Conducir, Entrenar y Resultados) | Es más directo que entrar a Simulación y luego elegir la vista. `F1` y `F2` se conservan. |

@@ -5,8 +5,10 @@ pedir algo, crear una solicitud en `requests/open/`.
 
 ## Educación (rumbo fijado por el usuario, postergado a propósito)
 
-- Dibujar lo que decide cada evasor: huecos y hueco elegido de FTG; vectores de
-  atracción, repulsión y resultante de APF.
+- Dibujar en vivo lo que decide cada evasor: huecos y hueco elegido de FTG;
+  vectores de atracción, repulsión y resultante de APF. Hoy solo existe una
+  escena fija por algoritmo en las tarjetas de Entrenar.
+- Animar las escenas de las tarjetas y agregarles una leyenda.
 - Explicar cada algoritmo dentro de la aplicación, con sus parámetros y su
   efecto en vivo.
 - Modo paso a paso: avanzar la simulación de a un paso y ver la decisión.
@@ -62,6 +64,11 @@ pedir algo, crear una solicitud en `requests/open/`.
 
 ## Interfaz
 
+- Guardar el tema elegido entre sesiones.
+- Incluir las tipografías de las maquetas (Outfit y DM Mono) en lugar de usar
+  las del sistema.
+- Guion reproducible para regenerar la escena de cada plugin.
+- Un color de acento opcional para los estados (llegó, chocó).
 - Mostrar la mejor solución de cada generación en una vista fija.
 - Elegir qué individuos mostrar (los mejores, al azar, por id).
 - Ver la tabla de reglas aprendida por la colonia de reglas.

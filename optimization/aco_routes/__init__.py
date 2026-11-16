@@ -4,6 +4,7 @@ Cada hormiga propone un camino celda a celda y un ``RouteController`` lo
 conduce en el simulador. Aprende una ruta por mapa: no generaliza a mapas no
 vistos, por lo que no participa de la validación.
 """
+from pathlib import Path
 from typing import Any
 
 from control.route_controller import RouteController, build_route_follower_settings
@@ -40,6 +41,8 @@ def build(config: dict) -> StrategyBundle:
     return StrategyBundle(colonies, RouteControllerFactory(build_route_follower_settings(config)))
 
 
+ASSETS = Path(__file__).parent      # el ícono y la escena viajan con el plugin
+
 PLUGIN = StrategyPlugin(
     name="aco_routes",
     label="Colonia de hormigas: rutas por mapa (ACO)",
@@ -53,4 +56,6 @@ PLUGIN = StrategyPlugin(
         "route_length": "Largo de la mejor ruta (celdas)",
         "trail_focus": "Feromona sobre la mejor ruta",
     },
+    icon=str(ASSETS / "icon.svg"),
+    demo=str(ASSETS / "demo.json"),
 )

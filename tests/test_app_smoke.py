@@ -400,3 +400,118 @@ def test_loading_a_checkpoint_restores_the_choices_it_was_trained_with(app):
     view.load_checkpoint(path)
     assert (view.selected_strategy, view.selected_avoidance) == ("aco_rules", "ftg")
     assert view.session.avoidance == "ftg"
+
+
+# --- interfaz: temas, secciones y pantallas nuevas -------------------------------------
+def click(app, pos):
+    pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=pos, button=1))
+    app.run_frames(1)
+
+
+def test_app_starts_in_the_light_theme_and_switches_to_the_dark_one(app):
+    app.run_frames(1)
+    assert app.theme.name == "light" and app.renderer.palette.name == "light"
+    corner = (3, app.screen.get_height() - 3)
+    light = tuple(app.screen.get_at(corner))[:3]
+    app.toggle_theme()
+    app.run_frames(1)
+    assert app.theme.name == "dark" and app.renderer.palette.name == "dark"
+    dark = tuple(app.screen.get_at(corner))[:3]
+    assert light == (255, 255, 255) and dark == app.theme.background and max(dark) < 40
+    app.set_theme("no-existe")                      # un nombre desconocido vuelve al claro
+    assert app.theme.name == "light"
+
+
+def test_theme_is_read_from_the_configuration(tmp_path):
+    application = Application(load_config(overrides={"window": {"width": 900, "height": 600, "theme": "dark"}}),
+                              base_dir=tmp_path)
+    try:
+        assert application.theme.name == "dark"
+        application.run_frames(1)
+    finally:
+        application.close()
+    assert load_config()["window"]["theme"] == "light"
+
+
+def test_the_four_sections_open_from_the_top_bar(app):
+    app.run_frames(1)
+    for tab in ("manual", "training", "results", "editor"):
+        app.open_tab(tab)
+        app.run_frames(2)
+        assert app.tab == tab
+    assert app.mode == "editor"
+    tabs = [rect for rect, _ in app.ui._hits[:4]]   # las cuatro secciones, en orden, y luego el cambio de tema
+    for rect, tab in zip(tabs[1:], ("manual", "training", "results")):
+        click(app, rect.center)
+        assert app.tab == tab and app.mode == "simulation"
+    click(app, tabs[0].center)
+    assert app.mode == "editor"
+    theme_switch = app.ui._hits[4][0]
+    click(app, theme_switch.center)
+    assert app.theme.name == "dark"
+
+
+def test_editor_tools_are_chosen_from_the_tool_rail(app):
+    view = app.editor_view
+    app.run_frames(1)
+    assert view.tool == "route"
+    press(view, (view.rail.centerx, view.rail.y + 8 + 3 * 70 + 20))      # cuarta herramienta: obstáculo móvil
+    assert view.tool == "dynamic"
+    app.run_frames(1)
+    view.toggle_maps()                              # la lista de mapas guardados ocupa el panel
+    app.run_frames(2)
+    assert view.show_maps and len(distinct_colors(app.screen)) > 5
+
+
+def test_training_starts_from_the_setup_screen_and_can_return_to_it(app):
+    app.open_tab("training")
+    view = app.simulation_view
+    app.run_frames(2)                               # pantalla de preparación: una tarjeta por algoritmo
+    assert view.session is None and len(distinct_colors(app.screen)) > 8
+    view.select_strategy("genetic")
+    view.select_avoidance("ftg")
+    view.start_training()
+    app.run_frames(6)
+    assert view.session is not None and view.running
+    visible = [run for run in view.session.visible if run is not None]
+    view.set_focus(len(visible) + 5)                # un agente que no existe se ajusta al último visible
+    app.run_frames(2)
+    assert view.focus == len(visible) - 1
+    view.reset_training()
+    app.run_frames(2)
+    assert view.session is None and view.running is False
+
+
+def test_a_plugin_without_icon_or_demo_scene_is_still_offered(app):
+    import dataclasses
+
+    view = app.simulation_view
+    view.plugins["genetic"] = dataclasses.replace(view.plugins["genetic"], icon="", demo="no/existe.json")
+    view.avoiders["ftg"] = dataclasses.replace(view.avoiders["ftg"], icon="no/existe.svg", demo="")
+    app.open_tab("training")
+    app.run_frames(2)
+    view.select_strategy("genetic")
+    view.select_avoidance("ftg")
+    view.start_training()
+    app.run_frames(4)
+    assert view.running and len(distinct_colors(app.screen)) > 5
+
+
+def test_comparison_switches_between_the_summary_and_every_metric(app):
+    app.set_mode("simulation")
+    view = app.simulation_view
+    view.select_strategy("reactive")
+    for avoidance in ("ftg", "apf"):
+        view.select_avoidance(avoidance)
+        view.new_training()
+        train_one_generation(app)
+        view.finish_training()
+    assert len(view.results.selected) == 2 and view.results.detail is False
+    app.run_frames(2)                               # resumen: barras y recuadros
+    summary = distinct_colors(app.screen)
+    view.results.toggle_detail()
+    app.run_frames(2)                               # tabla con todas las métricas
+    assert view.results.detail and len(summary) > 6 and len(distinct_colors(app.screen)) > 6
+    view.results.clear()
+    app.run_frames(2)                               # sin selección: invitación a elegir
+    assert view.results.selected == []

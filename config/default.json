@@ -1,5 +1,5 @@
 {
-  "window": {"width": 1280, "height": 800, "fps": 60},
+  "window": {"width": 1280, "height": 800, "fps": 60, "theme": "light"},
   "map": {"cols": 32, "rows": 20, "cell_size": 1.0},
   "simulation": {"dt": 0.05, "max_time": 40.0, "goal_radius": 0.6, "lookahead": 2.0},
   "vehicle": {

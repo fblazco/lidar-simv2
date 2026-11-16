@@ -71,7 +71,7 @@ ACO; no depende de quién planificó la ruta.
 class ObstacleAvoider:   reset(); adjust(observation, proposal: Action) -> Action
 class AvoidanceController(inner: Controller, avoider: ObstacleAvoider)   # es un Controller
 with_avoidance(controller_factory, make_avoider) -> controller_factory
-AvoidancePlugin(name, label, short_label, description, build(config) -> ObstacleAvoider | None)
+AvoidancePlugin(name, label, short_label, description, build(config) -> ObstacleAvoider | None, icon, demo)
 discover_avoidance() -> {nombre: AvoidancePlugin}       # "learned" primero
 ```
 
@@ -145,11 +145,17 @@ Una estrategia no toca la física ni el renderizado, y no impone representación
 
 ### Plugins — `optimization/registry.py`
 
-`StrategyPlugin(name, label, build, short_label, description, stat_labels)` y
+`StrategyPlugin(name, label, build, short_label, description, stat_labels, icon, demo)` y
 `StrategyBundle(strategy, controller_factory)`, donde `controller_factory` es
 `(solución, escenario) -> Controller`. `for_any_scenario(fábrica)` adapta las que
 no dependen del escenario. `discover_plugins()` importa cada subpaquete de
 `optimization/` que exponga `PLUGIN`. Nadie importa un algoritmo por nombre.
+
+`icon` y `demo` son opcionales y valen también para `AvoidancePlugin`: la ruta
+de un SVG de un solo color y la de una escena en JSON (formato más abajo), ambos
+dentro de la carpeta del plugin (`optimization/<nombre>/icon.svg` y `demo.json`;
+`control/avoidance/assets/<nombre>.svg` y `.json`). La interfaz los muestra sin
+saber de qué algoritmo son.
 
 ### Los tres plugins
 
@@ -224,9 +230,44 @@ El evaluador no sabe qué algoritmo produjo los candidatos.
 ## Renderizado e interfaz — `rendering/`, `ui/`
 
 - `rendering/ascii_renderer.py`: `route_glyphs`, `ascii_grid` (puras, sin Pygame).
-- `rendering/renderer.py`: `Viewport` y `WorldRenderer`; solo leen el estado.
-- `ui/application.py`: `Application(config, base_dir)`, `run()`, `set_mode()`.
+- `rendering/palette.py`: `WorldPalette` y sus dos juegos, `LIGHT` y `DARK`.
+  Monocromos; `emphasis("strong" | "medium" | "faint")` da los tres niveles que
+  usan las escenas.
+- `rendering/renderer.py`: `Viewport` y `WorldRenderer(fonts, palette)`; solo
+  leen el estado. `set_palette()` cambia los colores y descarta lo ya dibujado.
+- `rendering/scene.py`: `SceneRenderer(renderer).render(escena, tamaño)` devuelve
+  la imagen de una escena con la paleta activa y la recuerda.
+- `ui/theme.py`: `Theme` (colores de la interfaz y su `WorldPalette`), `LIGHT`,
+  `DARK`, `get_theme(nombre)`, `contrast(a, b)`. Ninguna vista escribe un color.
+- `ui/widgets.py`: `Toolkit` (tema activo, `Fonts`, `Shapes`, `Assets`) y `Ui`,
+  el dibujo de un cuadro: `card`, `button`, `segmented`, `stepper`, `toggle`,
+  `link`, `icon`… Cada control anota su zona pulsable y `Ui.click(pos)` la
+  resuelve. `Assets.icon(ruta, tamaño, color)` y `Assets.scene(ruta)` devuelven
+  `None` si el archivo falta.
+- `ui/application.py`: `Application(config, base_dir)`, `run()`, `set_mode()`,
+  `open_tab("editor" | "manual" | "training" | "results")`, `set_theme()`,
+  `toggle_theme()`.
 - `ui/editor_view.py`, `ui/simulation_view.py`, `ui/training_panel.py`,
-  `ui/results_view.py`, `ui/widgets.py`.
+  `ui/results_view.py`: las vistas. Reciben el `Toolkit`, nunca un tema fijo.
+
+Escena de un plugin (`demo`), en coordenadas del mundo:
+
+```json
+{"version": 1, "map": {"…": "un MapData"}, "ops": [
+  {"op": "heat", "grid": [[0.0, 0.4]]},
+  {"op": "rays", "origin": [x, y], "ends": [[x, y]], "hit": [1], "near": [0]},
+  {"op": "circles", "items": [[x, y, radio]]},
+  {"op": "line", "points": [[x, y]], "style": "medium", "width": 1.6, "dash": [2, 4]},
+  {"op": "arrow", "from": [x, y], "to": [x, y], "style": "strong", "width": 2.8, "head": 9},
+  {"op": "wedge", "center": [x, y], "radius": 2.5, "start": 0.1, "end": 1.2, "style": "strong", "alpha": 62, "outline": "strong"},
+  {"op": "cross", "at": [x, y], "style": "strong", "size": 5.5},
+  {"op": "dot", "at": [x, y], "style": "faint", "radius": 1.3},
+  {"op": "group", "alpha": 58, "ops": []},
+  {"op": "vehicle", "x": x, "y": y, "heading": 0.3, "moving": true}]}
+```
+
+El mapa se dibuja siempre primero; las operaciones, en orden. `style` es un
+nivel de énfasis, no un color; los grosores están pensados para una imagen de
+400 pixeles de ancho. Una operación desconocida se ignora.
 - El renderizador dibuja, si existen, el `cell_heatmap` de la estrategia y la
   `planned_path` del controlador de cada móvil, sin saber de qué algoritmo vienen.

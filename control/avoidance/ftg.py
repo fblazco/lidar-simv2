@@ -21,7 +21,7 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 
-from control.avoidance.base import (AvoidancePlugin, ObstacleAvoider, goal_in_sight, intended_direction,
+from control.avoidance.base import (AvoidancePlugin, ObstacleAvoider, asset, goal_in_sight, intended_direction,
                                     speed_guard, steering_towards)
 from control.controller import Action, Observation
 from control.rays import relative_ray_angles
@@ -101,4 +101,6 @@ PLUGIN = AvoidancePlugin(
     short_label="FTG",
     description="Encara el hueco más ancho entre los obstáculos que ve el LiDAR, ponderado con la dirección deseada.",
     build=build,
+    icon=asset("ftg.svg"),
+    demo=asset("ftg.json"),
 )

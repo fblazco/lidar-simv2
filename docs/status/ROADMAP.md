@@ -18,6 +18,7 @@ funcionalidad vive en [PROJECT_STATUS.md](PROJECT_STATUS.md).
 | 10. Mapas nuevos por generación y camino más corto | Mapas aleatorios de navegación libre que cambian en cada generación; largo del camino más corto por mapa; eficiencia en las métricas y en el fitness | `test_map_generator`, `test_shortest_path`, `test_fitness`, `test_evaluation`, `test_training` | Cerrada (2026-11-15) |
 | 11. Evasión de obstáculos a elección | Capa de evasión componible con cualquier navegación: aprendida, FTG y APF; navegación de referencia sin aprendizaje | `test_avoidance`, `test_architecture`, `test_app_smoke` | Cerrada (2026-11-15) |
 | 12. Comparación estadística | Registro de la evasión y del tipo de mapas; colisiones, eficiencia y holgura; intervalo de confianza y prueba de significancia sobre la validación | `test_results`, `test_app_smoke` | Cerrada (2026-11-15) |
+| 13. Interfaz clara y oscura | Dos temas monocromos con la misma disposición, cuatro secciones en la barra superior, algoritmos elegidos con tarjetas (ícono y escena aportados por cada plugin), comparación con barras | `test_theme`, `test_app_smoke`, `test_architecture` + capturas | Cerrada (2026-11-15) |
 
 ## Etapas siguientes (propuesta)
 
@@ -26,10 +27,10 @@ editando esta tabla o creando una solicitud en `requests/open/`.
 
 | Etapa | Objetivo | Se da por cerrada cuando |
 |---|---|---|
-| 13. Aplicación educativa | El rumbo que fijó el usuario y pidió postergar: explicar cada algoritmo dentro de la aplicación y mostrar lo que "piensa" (huecos de FTG, fuerzas de APF, tabla de reglas, feromonas) | A definir con el usuario |
-| 14. Comparación con más rigor | Varias semillas por combinación, comparar más de dos corridas a la vez, exportar tablas | Las conclusiones no dependen de una sola semilla |
-| 15. Revisión manual de la interfaz | Recorrer a mano cada vista en una ventana real y corregir lo que aparezca | Lista de comprobación completa |
-| 16. Más algoritmos | Navegación: PSO, ABC. Evasión: DWA, VFH | Cada uno entra como plugin sin tocar nada fuera de su archivo o carpeta |
-| 17. Rendimiento | Evaluar candidatos en procesos paralelos; entrenar en segundo plano | Una generación de 50 individuos tarda claramente menos que hoy |
+| 14. Aplicación educativa | El rumbo que fijó el usuario y pidió postergar: explicar cada algoritmo dentro de la aplicación y mostrar lo que "piensa" (huecos de FTG, fuerzas de APF, tabla de reglas, feromonas) | A definir con el usuario |
+| 15. Comparación con más rigor | Varias semillas por combinación, comparar más de dos corridas a la vez, exportar tablas | Las conclusiones no dependen de una sola semilla |
+| 16. Revisión manual de la interfaz | Recorrer a mano cada vista en una ventana real y corregir lo que aparezca | Lista de comprobación completa |
+| 17. Más algoritmos | Navegación: PSO, ABC. Evasión: DWA, VFH | Cada uno entra como plugin sin tocar nada fuera de su archivo o carpeta |
+| 18. Rendimiento | Evaluar candidatos en procesos paralelos; entrenar en segundo plano | Una generación de 50 individuos tarda claramente menos que hoy |
 
 Más ideas, sin orden ni compromiso: [BACKLOG.md](BACKLOG.md).

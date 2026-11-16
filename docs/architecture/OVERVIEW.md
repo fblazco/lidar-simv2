@@ -36,8 +36,8 @@ ningún plugin importa a otro.
 | `optimization/aco_rules/` | Plugin: colonia de hormigas que asigna maniobras a situaciones | ídem |
 | `optimization/aco_routes/` | Plugin: colonia de hormigas que traza una ruta por mapa | ídem |
 | `optimization/reactive/` | Plugin de referencia: navegación sin aprendizaje | ídem |
-| `rendering/` | Dibujo ASCII en Pygame; solo lee el estado | optimization |
-| `ui/` | Ventana, vistas, panel de entrenamiento, resultados | cualquier plugin |
+| `rendering/` | Dibujo ASCII en Pygame con una paleta clara y otra oscura; escenas explicativas; solo lee el estado | optimization, ui |
+| `ui/` | Ventana, temas, componentes, vistas e íconos propios | cualquier plugin |
 | `bootstrap.py` | Único punto de ensamblado: construye objetos desde la configuración | cualquier plugin, pygame |
 
 ## Los tres conceptos
@@ -165,8 +165,14 @@ sí solos. Ver ADR-0007.
    short_label, description, build)`, donde `build(config)` crea el evasor.
 3. Agregar sus parámetros en la sección `avoidance` de `config/default.json`.
 
+En los dos casos se puede sumar, en la misma carpeta, un ícono y una escena:
+`icon` es la ruta de un SVG de un solo color (la interfaz lo tiñe con el color
+del tema) y `demo` la de un JSON con una escena del algoritmo funcionando (ver
+`MODULE_CONTRACTS.md`). Son opcionales: sin ellos la tarjeta muestra la inicial
+del nombre y la descripción.
+
 En ambos casos no hay que tocar `simulation/`, `sensors/`, `editor/`, `ui/` ni
 `main.py`: el registro los descubre y aparecen solos en los selectores de la
-ventana y en `--strategy` / `--avoidance`. `tests/test_architecture.py`
+ventana (una tarjeta por algoritmo) y en `--strategy` / `--avoidance`. `tests/test_architecture.py`
 comprueba que el proyecto siga funcionando al borrar cualquier plugin de
 navegación.
