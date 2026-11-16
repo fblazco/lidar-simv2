@@ -49,8 +49,9 @@ simulador: arriba, quién aprende el camino; abajo, quién esquiva.*
   corto, y la eficiencia de cada llegada entra en el fitness.
 - **Con o sin ventana**: se entrena viendo `visible_agents` individuos a la vez,
   o desde la terminal sin abrir nada. Hay checkpoints y un registro por generación.
-- **Interfaz en modo claro y en modo oscuro**, en blancos, grises y negros: la
-  misma disposición en los dos y un botón para cambiar. Cada algoritmo trae su
+- **Tres temas de interfaz**: claro, oscuro y Aula Ubuntu, con papel cálido,
+  tinta ciruela y acentos naranjas. Comparten disposición y se recorren desde
+  el botón de la barra superior. Cada algoritmo trae su
   ícono y una escena del simulador que muestra cómo funciona.
 - **Resultados y comparación estadística**: al finalizar un entrenamiento se
   muestran sus estadísticas y quedan guardadas; dos corridas se comparan lado a
@@ -104,7 +105,7 @@ python3 -m pip install --target .venv/lib/python3.10/site-packages -r requiremen
    aparecen comparadas.
 6. Vuelve a **Conducir** y elige "Lo aprendido" para ver conducir al modelo.
 
-El botón de la derecha de la barra cambia entre el modo claro y el oscuro.
+El botón de la derecha de la barra recorre los temas claro, oscuro y Aula Ubuntu.
 
 ## La aplicación
 
@@ -183,7 +184,7 @@ la prueba de significancia, y `--resume models/<nombre>.npz` continúa una.
 
 Todos los parámetros ajustables están en
 [config/default.json](config/default.json): tema de la interfaz (`window.theme`:
-`light` u `dark`), navegación, evasión, población,
+`light`, `dark` o `ubuntu`), navegación, evasión, población,
 agentes visibles, límite de generaciones, semilla, escenarios, pesos del
 fitness, vehículo, LiDAR, red neuronal, generador de mapas y los parámetros de
 cada algoritmo de navegación y de evasión. Para cambiarlos sin editar ese archivo, crea un JSON solo con lo que

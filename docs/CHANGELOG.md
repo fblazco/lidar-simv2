@@ -2,6 +2,12 @@
 
 Historial resumido. El detalle de cada tarea está en `reports/`.
 
+## En curso — 2026-11-15
+
+Se agregó el tema Aula Ubuntu (papel cálido, ciruela y naranja) al ciclo de la
+barra y a la paleta del simulador. La verificación queda pendiente. Informe:
+`reports/2026-11-15-tema-aula-ubuntu.md`.
+
 ## 0.4.0 — 2026-11-15
 
 Interfaz nueva en modo claro y oscuro.

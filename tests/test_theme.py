@@ -6,7 +6,7 @@ import pygame
 import pytest
 
 import bootstrap
-from rendering.palette import DARK, LIGHT, PALETTES, WorldPalette
+from rendering.palette import DARK, LIGHT, PALETTES, UBUNTU, WorldPalette
 from rendering.renderer import Viewport, WorldRenderer
 from rendering.scene import SceneRenderer
 from ui.theme import THEMES, contrast, get_theme, other_theme
@@ -32,13 +32,13 @@ def close_to(pixel, color, tolerance=3):
     return all(abs(int(pixel[i]) - color[i]) <= tolerance for i in range(3))
 
 
-def test_there_is_a_light_and_a_dark_theme_and_unknown_names_fall_back_to_light():
-    assert set(THEMES) == {"light", "dark"}
+def test_there_are_three_themes_and_unknown_names_fall_back_to_light():
+    assert set(THEMES) == {"light", "dark", "ubuntu"}
     assert get_theme("no-existe").name == "light"
-    assert other_theme(THEMES["light"]).name == "dark" and other_theme(THEMES["dark"]).name == "light"
+    assert [other_theme(THEMES[name]).name for name in ("light", "dark", "ubuntu")] == ["dark", "ubuntu", "light"]
 
 
-@pytest.mark.parametrize("name", ["light", "dark"])
+@pytest.mark.parametrize("name", ["light", "dark", "ubuntu"])
 def test_text_is_readable_on_every_surface_of_a_theme(name):
     theme = THEMES[name]
     for background in (theme.background, theme.soft, theme.control, *theme.surface):
@@ -58,8 +58,8 @@ def test_themes_only_use_whites_greys_and_blacks(name):
 
 
 def test_world_palettes_tell_the_elements_apart_by_brightness():
-    assert PALETTES == {"light": LIGHT, "dark": DARK}
-    for palette in (LIGHT, DARK):
+    assert PALETTES == {"light": LIGHT, "dark": DARK, "ubuntu": UBUNTU}
+    for palette in (LIGHT, DARK, UBUNTU):
         assert isinstance(palette, WorldPalette)
         assert contrast(palette.vehicle, palette.background) >= 12.0
         assert contrast(palette.static, palette.background) >= 3.0
@@ -108,10 +108,11 @@ def test_demo_scenes_are_drawn_in_the_colours_of_the_active_palette(kit):
         assert dark.get_size() == (200, 120)
         assert scenes.render(scene, (200, 120)) is dark                    # se recuerda
         assert close_to(dark.get_at((1, 1)), DARK.background)
-        renderer.set_palette(LIGHT)
-        light = scenes.render(scene, (200, 120))
-        assert close_to(light.get_at((1, 1)), LIGHT.background)
-        assert len({tuple(light.get_at((x, y)))[:3] for x in range(0, 200, 3) for y in range(0, 120, 3)}) > 4
+        for palette in (LIGHT, UBUNTU):
+            renderer.set_palette(palette)
+            image = scenes.render(scene, (200, 120))
+            assert close_to(image.get_at((1, 1)), palette.background)
+            assert len({tuple(image.get_at((x, y)))[:3] for x in range(0, 200, 3) for y in range(0, 120, 3)}) > 4
         renderer.set_palette(DARK)
     assert kit.assets.scene("no/existe.json") is None and kit.assets.scene("") is None
 

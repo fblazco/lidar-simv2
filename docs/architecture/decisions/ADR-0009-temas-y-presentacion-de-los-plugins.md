@@ -19,15 +19,15 @@ Dos reglas del proyecto condicionan cómo hacerlo:
 
 ## Decisión
 
-1. **Un diseño, dos temas.** `ui/theme.py` define `Theme` (colores de la
+1. **Un diseño, temas intercambiables.** `ui/theme.py` define `Theme` (colores de la
    interfaz) y `rendering/palette.py` define `WorldPalette` (colores del
-   simulador). Hay un tema claro y uno oscuro; comparten la disposición de
-   pantalla y solo cambian los colores. Ninguna vista escribe un color: lo toma
-   del tema activo. El tema inicial sale de `window.theme` y se cambia en la
-   barra superior.
-2. **Sin tono.** Las paletas son grises fríos. Lo que antes distinguía un color
-   (llegó, chocó, corrida A o B) ahora lo distinguen el símbolo, el brillo, el
-   texto o el trazo (línea sólida y línea cortada; barra maciza y barra con
+   simulador). Los temas comparten la disposición y solo cambian los colores.
+   Ninguna vista escribe un color: lo toma del tema activo. El tema inicial
+   sale de `window.theme` y se recorre en la barra superior. El par claro/oscuro
+   se amplió con Aula Ubuntu: papel cálido, ciruela y naranja.
+2. **Contraste y significado visual.** Los tonos pueden cambiar entre temas,
+   pero mantienen contraste y los estados importantes también se distinguen
+   mediante símbolo, texto o trazo (línea sólida y cortada; barra maciza y con
    contorno).
 3. **El ícono y la escena viajan con el plugin.** `StrategyPlugin` y
    `AvoidancePlugin` ganan dos campos opcionales: `icon` (ruta de un SVG de un
@@ -46,7 +46,7 @@ Dos reglas del proyecto condicionan cómo hacerlo:
 
 - Agregar un algoritmo sigue sin tocar la interfaz: aparece con su tarjeta. Su
   ícono y su escena son opcionales.
-- Las escenas se ven bien en los dos temas y a cualquier tamaño, y ocupan pocos
+- Las escenas se ven bien en todos los temas y a cualquier tamaño, y ocupan pocos
   kilobytes; no hay imágenes duplicadas por tema.
 - Una escena es una foto fija: no cambia con la configuración del usuario ni se
   anima. Convertirla en explicación interactiva queda para la etapa educativa.
@@ -70,5 +70,6 @@ Dos reglas del proyecto condicionan cómo hacerlo:
 - **Simulación en vivo dentro de cada tarjeta.** Necesita un modelo ya
   entrenado para los algoritmos que aprenden, que no existe al abrir la
   aplicación por primera vez.
-- **Un color de acento para los estados.** Se propuso; el usuario eligió
-  estilos estrictamente monocromos.
+- **Acentos saturados por estado.** Los resultados conservan formas y trazos
+  propios; el naranja de Aula Ubuntu es parte de su paleta global y no la única
+  señal para identificar un resultado.

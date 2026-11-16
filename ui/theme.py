@@ -1,14 +1,10 @@
-"""Temas de la interfaz: claro (blanco, líneas finas) y oscuro (grafito y plata).
-
-Los dos comparten la disposición de pantalla; solo cambian los colores. Son
-monocromos: blancos, grises y negros con brillo metálico.
-"""
+"""Temas de la interfaz. Todos comparten disposición y componentes."""
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Tuple
 
-from rendering.palette import DARK as DARK_WORLD, LIGHT as LIGHT_WORLD, WorldPalette
+from rendering.palette import DARK as DARK_WORLD, LIGHT as LIGHT_WORLD, UBUNTU as UBUNTU_WORLD, WorldPalette
 
 Color = Tuple[int, int, int]
 Gradient = Tuple[Color, Color]      # (arriba, abajo)
@@ -52,7 +48,18 @@ DARK = Theme(
     world=DARK_WORLD,
 )
 
-THEMES = {theme.name: theme for theme in (LIGHT, DARK)}
+UBUNTU = Theme(
+    name="ubuntu", label="Modo Ubuntu", background=(249, 246, 239),
+    surface=((255, 252, 247), (247, 241, 231)), soft=(239, 231, 218),
+    line=(211, 197, 179), control=(255, 252, 247), control_line=(177, 153, 133),
+    outline=(74, 44, 60), text=(43, 32, 40), muted=(91, 67, 80),
+    primary=((119, 33, 111), (94, 39, 80)), on_primary=(255, 252, 247),
+    track=(225, 211, 194),
+    chrome=((233, 84, 32), (119, 33, 111), (245, 160, 67), (94, 39, 80), (233, 84, 32)),
+    world=UBUNTU_WORLD,
+)
+
+THEMES = {theme.name: theme for theme in (LIGHT, DARK, UBUNTU)}
 DEFAULT_THEME = "light"
 
 
@@ -62,7 +69,10 @@ def get_theme(name: str) -> Theme:
 
 
 def other_theme(theme: Theme) -> Theme:
-    return DARK if theme.name == "light" else LIGHT
+    """Siguiente tema en el ciclo de la barra superior."""
+    order = (LIGHT, DARK, UBUNTU)
+    index = next((i for i, item in enumerate(order) if item.name == theme.name), -1)
+    return order[(index + 1) % len(order)]
 
 
 def _luminance(color: Color) -> float:

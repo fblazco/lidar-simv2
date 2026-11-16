@@ -5,6 +5,11 @@
 Solo figura como implementado lo que fue verificado. "Verificado con" indica la
 prueba automática o la comprobación realizada.
 
+### Pendiente de verificación
+
+El tema Aula Ubuntu está conectado a la interfaz y a la paleta del simulador;
+las pruebas correspondientes se actualizaron, pero aún no se ejecutaron.
+
 ## Implementadas
 
 | Funcionalidad | Verificado con |

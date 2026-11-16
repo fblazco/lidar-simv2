@@ -7,10 +7,10 @@
 ```
 
 Una sola ventana. La barra superior tiene cuatro secciones: **Editor de mapas**,
-**Conducir**, **Entrenar** y **Resultados**. A la derecha, un botón cambia entre
-el **modo claro** y el **modo oscuro**: los dos tienen la misma disposición y
-solo cambian los colores (blancos, grises y negros). El tema con que se abre se
-fija en `window.theme` (`light` u `dark`); el elegido con el botón no se guarda.
+**Conducir**, **Entrenar** y **Resultados**. A la derecha, un botón recorre tres
+temas con la misma disposición: **claro**, **oscuro** y **Aula Ubuntu**, de papel
+cálido, tinta ciruela y acentos naranjas. El tema con que se abre se fija en
+`window.theme` (`light`, `dark` o `ubuntu`); el elegido con el botón no se guarda.
 
 Teclado: `F1` abre el editor y `F2` la simulación; dentro de ella, `M` es
 Conducir, `T` Entrenar y `C` Resultados.
@@ -215,7 +215,7 @@ tocarlo, crear un JSON solo con las claves a modificar y pasarlo con `--config`:
 
 | Sección | Qué controla |
 |---|---|
-| `window` | tamaño de ventana, cuadros por segundo y tema (`theme`: `light` u `dark`) |
+| `window` | tamaño de ventana, cuadros por segundo y tema (`theme`: `light`, `dark` o `ubuntu`) |
 | `map` | tamaño de grilla por defecto |
 | `simulation` | paso de tiempo, límite del episodio, radio de llegada |
 | `vehicle` | radio, velocidades, aceleración, ángulo de dirección |

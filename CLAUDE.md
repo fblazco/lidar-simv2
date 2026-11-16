@@ -60,8 +60,8 @@ algoritmos y la comparación estadística funcionen.
 - Movimiento y colisiones independientes del renderizado; paso de tiempo fijo.
 - Pygame solo en `rendering/` y `ui/`. El entrenamiento debe correr sin ventana
   y nunca bloquear el ciclo de Pygame.
-- Interfaz monocroma (blancos, grises y negros) en dos temas, claro y oscuro,
-  con la misma disposición. Los colores salen de `ui/theme.py` y
+- Interfaz en tres temas (claro, oscuro y Aula Ubuntu), con la misma disposición.
+  Los colores salen de `ui/theme.py` y
   `rendering/palette.py`, nunca de una vista; sin color, dos estados deben
   diferir también en forma o en texto.
 - Las dimensiones de entrada de la red salen solo de `ObservationBuilder.size`.

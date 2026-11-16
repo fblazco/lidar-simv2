@@ -1,9 +1,4 @@
-"""Colores con que se dibuja el mundo: un juego para fondo oscuro y otro para fondo claro.
-
-Son monocromos (blancos, grises y negros): lo que distingue a cada elemento es
-su símbolo y su brillo, no su tono. El renderizador recibe una paleta; no
-decide cuál se usa.
-"""
+"""Paletas del mundo. El renderizador recibe la paleta activa y no la decide."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -62,4 +57,15 @@ LIGHT = WorldPalette(
     strong=(0, 0, 0), medium=(88, 93, 100), faint=(150, 155, 162),
 )
 
-PALETTES = {palette.name: palette for palette in (LIGHT, DARK)}
+UBUNTU = WorldPalette(
+    name="ubuntu", background=(249, 246, 239), grid=(218, 207, 190),
+    route=(94, 39, 80), route_unused=(205, 187, 168), static=(190, 65, 28),
+    block=(241, 224, 208), dynamic=(94, 39, 80), trajectory=(184, 139, 153),
+    selected=(233, 84, 32), start=(119, 33, 111), goal=(233, 84, 32),
+    ray=(233, 222, 207), ray_hit=(207, 141, 108), hit_point=(119, 33, 111),
+    target=(207, 120, 64), heat=(233, 84, 32), planned=(119, 33, 111),
+    trail=(94, 39, 80), vehicle=(66, 29, 58), vehicle_stopped=(161, 84, 69),
+    strong=(94, 39, 80), medium=(190, 65, 28), faint=(174, 151, 132),
+)
+
+PALETTES = {palette.name: palette for palette in (LIGHT, DARK, UBUNTU)}

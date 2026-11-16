@@ -418,6 +418,10 @@ def test_app_starts_in_the_light_theme_and_switches_to_the_dark_one(app):
     assert app.theme.name == "dark" and app.renderer.palette.name == "dark"
     dark = tuple(app.screen.get_at(corner))[:3]
     assert light == (255, 255, 255) and dark == app.theme.background and max(dark) < 40
+    app.toggle_theme()
+    assert app.theme.name == "ubuntu" and app.renderer.palette.name == "ubuntu"
+    app.toggle_theme()
+    assert app.theme.name == "light" and app.renderer.palette.name == "light"
     app.set_theme("no-existe")                      # un nombre desconocido vuelve al claro
     assert app.theme.name == "light"
 
